@@ -262,8 +262,8 @@ class DMError:
 
 class DMErrorUnknownMember extends DMError:
 	func _init(node: DMNode, base: DMBase) -> void:
-		var base_context = '%s' % base.get_path_to(node)
+		var base_context = "[color=white]'%s'[/color]" % base.get_path_to(node)
 		if base.root == node:
 			base_context = "usings or state autoload shortcuts"
-		super._init(ErrType.UnknownMember, "Could not find member '%s' in %s." % [node.identifier, base_context])
+		super._init(ErrType.UnknownMember, "[color=gray]Could not find member [color=white]'%s'[/color] [color=gray]in %s." % [node.identifier, base_context])
 #endregion

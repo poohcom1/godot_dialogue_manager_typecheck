@@ -31,7 +31,7 @@ func _enter_tree() -> void:
 		else:
 			print_rich("[color=dark_gray][DM Typecheck][/color] Found [color=#ff786b][b]%d errors[/b][/color] in [b]%s[/b]." % [len(errors), dialogue.resource_path])
 			for line in errors:
-				print_rich("[color=#ff786b] - Error at %d: %s" % [line, errors[line]])
+				print_rich("[color=#ff786b] - Error at %d:[/color] %s" % [line, errors[line]])
 	)
 
 
