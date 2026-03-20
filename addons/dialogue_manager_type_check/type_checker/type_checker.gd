@@ -50,7 +50,6 @@ static func check_type(dialogue: DialogueResource) -> Dictionary[int, DMError]:
 
 #region Parsing Helpers
 
-## Helper to turn a flat token list into Node structure
 static func _parse_expression_list(tokens: Array) -> Array[DMBase]:
 	var items: Array[DMBase] = []
 	var i := 0
@@ -115,7 +114,6 @@ static func _wrap_in_base(node: DMNode) -> DMBase:
 
 #region Verification
 
-## line_no must be injected after analysis
 static func _verify_item(node: DMNode, base_scripts: Array[Script], base: DMBase) -> DMError:
 	if node is DMOperator:
 		pass # TODO
@@ -126,7 +124,7 @@ static func _verify_item(node: DMNode, base_scripts: Array[Script], base: DMBase
 			for method_info in script.get_script_method_list():
 				if method_info.name == node.identifier:
 					return DMError.ok()
-			# May be a cs async function
+			# Maybe a cs async function
 			if script.resource_path.ends_with(".cs"):
 				var method_info = cs_type_checker.GetCsScriptMethodInfo(script, node.identifier)
 				if method_info != null:
