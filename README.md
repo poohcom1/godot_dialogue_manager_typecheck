@@ -20,9 +20,9 @@ Version number tracks the base addon's version. If the base addon's version is h
 ## Features
 
 - Adds an editor tool at `Project > Tools > Dialogue > Check Type` to analyze the type correctness of a dialogue file.
-- [Planned] A script that can be used in CI to verify all dialogue files in a project.
+- Adds a scene script that can be used in CI to verify all dialogue files in a project.
 
-## Type Coverage
+### Type Coverage
 
 | Case                       | Example                         | Covered        | Comment                                                        |
 | -------------------------- | ------------------------------- | -------------- | -------------------------------------------------------------- |
@@ -35,4 +35,13 @@ Version number tracks the base addon's version. If the base addon's version is h
 | Enums                      | `Autoload.Enum.A`               | false-positive |                                                                |
 | Static                     | `Autoload.Class.static_func()`  | false-positive |                                                                |
 | Nested expressions         | `do function(Autoload.member)`  | ignore         |                                                                |
-| Function signature         | `do function(1, "123")`         | ignored        | Planned                                                        |
+| Function signature         | `do function(1, "123")`         | ignored        |                                                                |
+| Snippets                   |                                 | not tested     |                                                                |
+
+## CLI
+
+Run the following command to verify all dialogue files in a project:
+
+```sh
+godot --headless -d addons/dialogue_manager_type_check/cli/check_all.tscn
+```
