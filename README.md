@@ -6,7 +6,7 @@ An addon to an addon--a type checker module for Nathan Hoad's <img src="https://
 
 ![Output example](.github/assets/error%20output.png)
 
-Mirror of the addon on my local project--I won't be maintaining it much, but feel free to open a PR for increase coverage.
+This is a mirror of the addon on my local project--I won't be maintaining it much, but feel free to open a PR for increased coverage.
 
 ## Installation
 
@@ -24,10 +24,12 @@ Version number tracks the base addon's version. If the base addon's version is h
 
 ### Type Coverage
 
+In general, I use DM with a top-level member access or autoload member access, and rarely with any nested logic. As such, I've focused the coverage for these use-cases. I tried to make the current analyzer as forgiving as possible for nested expressions, but as I want to leave it open to improvement for more in-depth analysis, there may be some false positives (i.e. assumed error). If anyone wants to either (1) implement analysis for these or (2) suppress the analyzer from reporting these as errors, feel free to open a PR. 
+
 | Case                       | Example                         | Covered        | Comment                                                        |
 | -------------------------- | ------------------------------- | -------------- | -------------------------------------------------------------- |
 | Top-level expressions      | `do global_function()`          | yes            | Inferred from `using` or `state_autoload_shortcuts` in setting |
-| Extra auto-complete source | `do extra_function()`           | false-positive | Inferred from `extra_auto_complete_script_sources` in setting  |
+| Extra auto-complete source | `do extra_function()`           | false-positive | From `extra_auto_complete_script_sources` in setting           |
 | Nested expression          | `do Autoload.function()`        | yes            |                                                                |
 | if statements              | `if Autoload.member`            | yes            |                                                                |
 | set statements             | `set Autoload.member = 1`       | yes            |                                                                |
@@ -45,3 +47,4 @@ Run the following command to verify all dialogue files in a project:
 ```sh
 godot --headless -d addons/dialogue_manager_type_check/cli/check_all.tscn
 ```
+This returns an exit-code of 1 if there are any errors, so you can easily plug this into your CI.
