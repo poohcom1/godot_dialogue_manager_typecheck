@@ -26,10 +26,12 @@ func _enter_tree() -> void:
 	quick_open.files_list.file_double_clicked.connect(func(file_path: String):
 		var dialogue: DialogueResource = load(file_path)
 		var errors := TypeChecker.check_type(dialogue)
-		for line in errors:
-			printerr("Error at %d: %s" % [line, errors[line]])
 		if len(errors) == 0:
-			print("No errors in %s." % dialogue.resource_path)
+			print_rich("[color=dark_gray][DM Typecheck][/color] No errors in %s." % dialogue.resource_path)
+		else:
+			print_rich("[color=dark_gray][DM Typecheck][/color] Found [color=#ff786b][b]%d errors[/b][/color] in [b]%s[/b]." % [len(errors), dialogue.resource_path])
+			for line in errors:
+				print_rich("[color=#ff786b] - Error at %d: %s" % [line, errors[line]])
 	)
 
 
@@ -38,7 +40,7 @@ func _enter_tree() -> void:
 	assert(dialogue_tool_menu != null)
 
 	
-	dialogue_tool_menu.add_item("Check Type", ID_CHECK_TYPE)
+	dialogue_tool_menu.add_icon_item(load("res://addons/dialogue_manager/assets/region.svg"), "Check Type", ID_CHECK_TYPE)
 	dialogue_tool_menu.id_pressed.connect(_on_tool_pressed)
 
 func _exit_tree() -> void:
