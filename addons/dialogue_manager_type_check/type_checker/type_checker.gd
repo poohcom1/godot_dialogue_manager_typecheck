@@ -243,9 +243,9 @@ class DMError:
 	var type: ErrType
 	var msg: String = ""
 
-	func _init(type: ErrType, msg = "") -> void:
-		self.type = type
-		self.msg = msg
+	func _init(p_type: ErrType, p_msg = "") -> void:
+		type = p_type
+		msg = p_msg
 
 	static func ok() -> DMError:
 		return DMError.new(ErrType.Ok)
