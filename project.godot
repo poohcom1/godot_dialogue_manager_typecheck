@@ -14,9 +14,17 @@ config/name="Dialoogue Manager Typecheck"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
 
+[autoload]
+
+DialogueManager="*uid://c3rodes2l3gxb"
+
 [dotnet]
 
 project/assembly_name="Dialoogue Manager Typecheck"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/dialogue_manager/plugin.cfg", "res://addons/dialogue_manager_type_check/plugin.cfg")
 
 [physics]
 
