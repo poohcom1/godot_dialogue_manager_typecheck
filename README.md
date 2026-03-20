@@ -1,12 +1,12 @@
-# Dialogue Manager - Type Checker
+# Dialogue Manager *- Type Checker*
 
-An addon to an addon--a type checker module for Nathan Hoad's <img src="https://raw.githubusercontent.com/nathanhoad/godot_dialogue_manager/refs/heads/main/docs/media/logo.svg" height="16px"> [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager).
+An addon to for addon--a type checker module for Nathan Hoad's <img src="https://raw.githubusercontent.com/nathanhoad/godot_dialogue_manager/refs/heads/main/docs/media/logo.svg" height="16px"> [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager).
 
 ![Example usage as tools](.github/assets/tool%20example.png)
 
 ![Output example](.github/assets/error%20output.png)
 
-This is a mirror of the addon on my local project--I won't be maintaining it much, but feel free to open a PR for increased coverage.
+This is a mirror of the addon on my local project--I won't be maintaining it much or upload it to the asset library, but feel free to open a PR for increased coverage.
 
 ## Installation
 
