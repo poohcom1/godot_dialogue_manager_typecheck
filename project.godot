@@ -17,6 +17,13 @@ config/icon="res://icon.svg"
 [autoload]
 
 DialogueManager="*uid://c3rodes2l3gxb"
+Autoload="*uid://fhaf63l3xpc7"
+DialogueAutoload="*uid://bw2sgp4y1vf1q"
+Global="*uid://dpjh60wukbi3"
+
+[dialogue_manager]
+
+runtime/state_autoload_shortcuts=["Global"]
 
 [dotnet]
 
