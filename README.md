@@ -35,6 +35,8 @@ Run the following command to verify all dialogue files in a project:
 godot --headless -d addons/dialogue_manager_type_check/cli/check_all.tscn
 ```
 
+The commands return a non-zero exit code if errors are found, so you can easily plug this into your CI.
+
 ![CLI example](.github/assets/cli.png)
 
 ### Editor
@@ -44,6 +46,8 @@ Adds highlighting in the dialogue editor. Click on the warning icon in the gutte
 ![Code edit example](.github/assets/code%20edit%20addon.png)
 
 ## Type Coverage
+
+In general, I use DM with a top-level member access or autoload member access, and rarely with any nested logic. As such, I've focused the coverage for these use-cases. I tried to make the current analyzer as forgiving as possible for nested expressions, but as I want to leave it open to improvement for more in-depth analysis, there may be some false positives (i.e. assumed error). If anyone wants to either (1) implement analysis for these or (2) suppress the analyzer from reporting these as errors, feel free to open a PR.
 
 | Case                       | Example                                                 | Covered        |
 | -------------------------- | ------------------------------------------------------- | -------------- |
@@ -59,3 +63,4 @@ Adds highlighting in the dialogue editor. Click on the warning icon in the gutte
 | Nested expressions         | `do function(Autoload.member)`                          | ignored        |
 | In-line mutation           | `NPC: Hey! [do wait(0.1)]Who are you?`                  | ignored        |
 | Snippets                   | `import "res://snippets.dialogues as snippets`          | not tested     |
+| Built-in types             | `do Autoload.queue_free()`                              | not tested     |
