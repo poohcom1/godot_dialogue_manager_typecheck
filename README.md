@@ -62,5 +62,5 @@ In general, I use DM with a top-level member access or autoload member access, a
 | Static                     | `Autoload.Class.static_func()`                          | false-positive |
 | Nested expressions         | `do function(Autoload.member)`                          | ignored        |
 | In-line mutation           | `NPC: Hey! [do wait(0.1)]Who are you?`                  | ignored        |
-| Snippets                   | `import "res://snippets.dialogues as snippets`          | not tested     |
+| Snippets                   | `import "res://snippets.dialogues" as snippets`          | not tested     |
 | Built-in types             | `do Autoload.queue_free()`                              | not tested     |
