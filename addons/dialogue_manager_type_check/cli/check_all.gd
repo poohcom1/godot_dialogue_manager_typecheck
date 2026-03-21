@@ -21,7 +21,7 @@ func _ready():
 			has_errors = true
 			print_rich(" [color=red]✕[/color] [color=#ff786b]%s[/color]" % dialogue.resource_path)
 			for line in errors:
-				print_rich("[color=#ff786b]   - Error at ln %d:[/color] %s" % [line, errors[line]])
+				print_rich("[color=#ff786b]   - Error at ln %d: %s" % [line, errors[line]])
 
 	print()
 	print_rich("[color=gray]==== DM Typecheck finished ====[/color]")

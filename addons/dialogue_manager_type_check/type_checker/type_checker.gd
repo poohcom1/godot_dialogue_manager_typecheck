@@ -30,7 +30,8 @@ static func check_type(dialogue: DialogueResource) -> Dictionary[int, DMError]:
 		var expressions := []
 
 		if line.type == DMConstants.TYPE_MUTATION:
-			expressions = line.mutation.expression
+			if &"expression" in line.mutation:
+				expressions = line.mutation.expression
 		elif line.type == DMConstants.TYPE_CONDITION:
 			if &"expression" in line.condition:
 				expressions = line.condition.expression
@@ -159,7 +160,7 @@ static func _verify_item(node: DMNode, base_scripts: Array[Script], base: DMBase
 	return DMError.ok()
 
 static func _get_autoload_script(autoload: StringName) -> Script:
-	var setting: String = ProjectSettings.get("autoload/%s" % autoload)
+	var setting = ProjectSettings.get("autoload/%s" % autoload)
 	if setting == null or setting == "":
 		return null
 	var path: String = setting.replace("*", "")
@@ -260,8 +261,8 @@ class DMError:
 
 class DMErrorUnknownMember extends DMError:
 	func _init(node: DMNode, base: DMBase) -> void:
-		var base_context = "[color=white]'%s'[/color]" % base.get_path_to(node)
+		var base_context = '"%s"' % base.get_path_to(node)
 		if base.root == node:
 			base_context = "usings or state autoload shortcuts"
-		super._init(ErrType.UnknownMember, "[color=gray]Could not find member [color=white]'%s'[/color] [color=gray]in %s." % [node.identifier, base_context])
+		super._init(ErrType.UnknownMember, 'Could not find member "%s" in %s.' % [node.identifier, base_context])
 #endregion
