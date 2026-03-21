@@ -1,0 +1,8 @@
+using DialogueAutoload
+
+~ start
+
+do test_globals() # Unknown func for global
+do Autoload.test_autoloads() # Unknown func for autoload
+
+=> END

@@ -28,3 +28,5 @@ func _exit_tree() -> void:
 		return
 	_tool_menu.on_exit_tree()
 	_code_edit_addon.on_exit_tree()
+	
+	_type_checker.cleanup()

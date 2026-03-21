@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=16
+type="Resource"
+uid="uid://hs1dgiwkh6pc"
+path="res://.godot/imported/invalid.dialogue-a0dbaafe7355689665db2b6c9026b333.tres"
+
+[deps]
+
+source_file="res://tests/resources/invalid.dialogue"
+dest_files=["res://.godot/imported/invalid.dialogue-a0dbaafe7355689665db2b6c9026b333.tres"]
+
+[params]
+
+defaults=true
