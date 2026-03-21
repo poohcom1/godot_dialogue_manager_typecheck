@@ -6,8 +6,8 @@ using System.Reflection;
 using Godot;
 using Godot.Collections;
 
-public partial class TypeChecker : GodotObject {
-    public static Dictionary? GetCsScriptMethodInfo(Script script, string methodName) {
+public partial class TypeChecker : RefCounted {
+    public Dictionary? GetCsScriptMethodInfo(Script script, string methodName) {
         string typeName = script.ResourcePath.GetFile().GetBaseName();
         var type = Assembly.GetExecutingAssembly().GetTypes().FirstOrDefault(t => t.Name == typeName);
 
@@ -24,7 +24,7 @@ public partial class TypeChecker : GodotObject {
     }
 
     // Helper
-    private static Dictionary BuildMethodDictionary(MethodInfo methodInfo) {
+    private Dictionary BuildMethodDictionary(MethodInfo methodInfo) {
         var args = new Array<Dictionary>();
         foreach (var param in methodInfo.GetParameters()) {
             args.Add(

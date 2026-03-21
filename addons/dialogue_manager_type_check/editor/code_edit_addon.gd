@@ -5,8 +5,12 @@ const TypeChecker := preload("../type_checker/type_checker.gd")
 
 const DMMainView := preload("res://addons/dialogue_manager/views/main_view.gd")
 
+var _type_checker: TypeChecker
 var _dm_main_view: DMMainView
-var _error_cache: Dictionary[int, TypeChecker.DMError] = {}
+var _error_cache: Dictionary[int, TypeChecker.TypeError] = {}
+
+func _init(type_checker: TypeChecker) -> void:
+	_type_checker = type_checker
 
 func on_enter_tree() -> void:
 	await EditorInterface.get_base_control().get_tree().process_frame
@@ -51,10 +55,10 @@ func _on_parse() -> void:
 	resource.lines = result.lines
 	resource.raw_text = code_edit.text
 
-	_error_cache = TypeChecker.check_type(resource)
+	_error_cache = await _type_checker.check_type(resource)
 	_add_gutter_warnings(_error_cache)
 
-func _add_gutter_warnings(errors: Dictionary[int, TypeChecker.DMError]) -> void:
+func _add_gutter_warnings(errors: Dictionary[int, TypeChecker.TypeError]) -> void:
 	var code_edit := _dm_main_view.code_edit
 
 	var warning_color := Color(EditorInterface.get_editor_settings().get_setting("text_editor/theme/highlighting/comment_markers/warning_color"), 0.2)
