@@ -13,7 +13,7 @@ const BUILT_IN_FUNCS := [&"wait", &"Wait", &"debug", &"Debug"]
 
 func _init() -> void:
 	_dialogue_manager = DialogueManager.new()
-	if ClassDB.class_exists("CSharpScript"):
+	if ProjectSettings.get("application/config/features").has("C#"):
 		_cs_type_checker = load("res://addons/dialogue_manager_type_check/type_checker/TypeChecker.cs").new()
 
 func cleanup() -> void:

@@ -1,0 +1,9 @@
+using DialogueAutoload
+
+~ start
+
+do test_global()
+do test_using()
+do Autoload.test_autoload()
+
+=> END
