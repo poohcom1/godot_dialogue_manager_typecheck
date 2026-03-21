@@ -1,6 +1,8 @@
-# Dialogue Manager _- Type Checker_
+# <img src="https://raw.githubusercontent.com/nathanhoad/godot_dialogue_manager/refs/heads/main/docs/media/logo.svg" height="24px"> Dialogue Manager _- Type Checker_
 
-An addon to for addon--a type checker module for Nathan Hoad's <img src="https://raw.githubusercontent.com/nathanhoad/godot_dialogue_manager/refs/heads/main/docs/media/logo.svg" height="16px"> [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager).
+<img alt="Dynamic TOML Badge" src="https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpoohcom1%2Fgodot_dialogue_manager_typecheck%2Frefs%2Fheads%2Fmaster%2Faddons%2Fdialogue_manager_type_check%2Fplugin.cfg&query=plugin.version&prefix=v&label=Dialogue%20Manager">
+
+An addon to for addon--a type checker module for Nathan Hoad's [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager).
 
 ![Code edit example](.github/assets/code%20edit%20addon.png)
 
@@ -12,8 +14,9 @@ Version number tracks the base addon's version. If the base addon's version is h
 
 1. Download or clone the repo.
 2. Copy `addons/dialogue_manager_type_check` to your project's addon folder.
-3. Make sure dialogue_manager is already activated.
-4. Activate "Dialogue Manager Type Checker" in the plugins.
+3. Make sure dialogue_manager is already installed and activated.
+4. (If using C#) Run `dotnet build`.
+5. Activate "Dialogue Manager Type Checker" in the plugins.
 
 ## Features
 
