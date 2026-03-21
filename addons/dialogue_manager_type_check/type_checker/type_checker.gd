@@ -54,10 +54,10 @@ func check_type(dialogue: DialogueResource) -> Dictionary[int, TypeError]:
 
 		var items: Array[TreeNode] = _parse_expression_list(expressions)
 		for item in items:
-			if item.next is TreeFunction && item.next.identifier in BUILT_IN_FUNCS:
+			if item is TreeFunction && item.identifier in BUILT_IN_FUNCS:
 				continue
 
-			var err = _verify_item(item.next, global_scripts, item)
+			var err = _verify_item(item, global_scripts, item)
 			if not err.is_ok():
 				errors[line_no] = err
 	return errors
@@ -98,7 +98,7 @@ static func _parse_expression_list(tokens: Array) -> Array[TreeNode]:
 				# Operators break the current chain and become their own 'item'
 				var op_node = TreeOperator.new()
 				op_node.token_type = token.type
-				items.append(_wrap_in_base(op_node))
+				items.append(op_node)
 				current_base = null # Reset for the next part of the expression
 				tail = null
 				i += 1
@@ -110,8 +110,7 @@ static func _parse_expression_list(tokens: Array) -> Array[TreeNode]:
 
 		if new_node:
 			if current_base == null:
-				current_base = TreeNode.new()
-				current_base.next = new_node
+				current_base = new_node
 				items.append(current_base)
 			else:
 				tail.next = new_node
@@ -119,11 +118,6 @@ static func _parse_expression_list(tokens: Array) -> Array[TreeNode]:
 			
 		i += 1
 	return items
-
-static func _wrap_in_base(node: TreeNode) -> TreeNode:
-	var b = TreeNode.new()
-	b.next = node
-	return b
 
 #endregion
 
@@ -155,7 +149,7 @@ func _verify_item(node: TreeNode, base_scripts: Array[Script], base: TreeNode) -
 					member_script = _get_script_for_class_name(property_info.get("class_name", ""))
 					if member_script:
 						break
-		if member_script == null and base.next == node:
+		if member_script == null and base == node:
 			# Top level, look for autoloads
 			member_script = _get_autoload_script(node.identifier)
 		
@@ -268,7 +262,7 @@ class TypeError:
 class TypeErrorUnknownMember extends TypeError:
 	func _init(node: TreeNode, base: TreeNode, is_function: bool = false) -> void:
 		var base_context = '"%s"' % base.get_path_to(node)
-		if base.next == node:
+		if base == node:
 			base_context = "usings or state autoload shortcuts"
 		
 		var member_name = "function" if is_function else "property"
