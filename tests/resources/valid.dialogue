@@ -28,6 +28,8 @@ do Autoload.SubClass.SubConstant
 do Autoload.SubClass.static_func()
 do Autoload.get_parent()
 do Autoload.node2d.global_position
+# C#
+do CSharpAutoload.Function()
 
 Info: Finished valid dialogue.
 

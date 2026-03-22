@@ -10,4 +10,5 @@ do Autoload.SubClass.instance_member # Access instance member from static
 do Autoload.SubClass.instance_func() # Access to instance func from static
 do debug(unknown_func()) # Unknown inner arg
 do test_args(test_global(), unknown_func()) # Unkown 2nd inner arg
+do CSharpAutoload.UnknownFunction() # C# test
 => END

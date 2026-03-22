@@ -28,3 +28,4 @@ func test_invalid():
 	assert_int(results[10].type).is_equal(TypeChecker.TypeErrorType.StaticFuncAccess)
 	assert_int(results[11].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)
 	assert_int(results[12].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)
+	assert_int(results[13].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)

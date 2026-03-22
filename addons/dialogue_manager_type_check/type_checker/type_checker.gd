@@ -142,8 +142,8 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 						return StaticFuncAccess.new(node, base)
 					found_method = method_info
 			# Maybe a cs async function
-			if _cs_type_checker and class_type.resource_path.ends_with(".cs"):
-				var method_info = _cs_type_checker.GetCsScriptMethodInfo(class_type, node.identifier)
+			if _cs_type_checker and class_type is ScriptType and class_type.class_script.resource_path.ends_with(".cs"):
+				var method_info = _cs_type_checker.GetCsScriptMethodInfo(class_type.class_script, node.identifier)
 				if method_info != null:
 					found_method = method_info
 		
