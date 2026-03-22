@@ -1,5 +1,4 @@
 name: CI
-run-name: ${{ github.head_ref || github.ref_name }}-ci-pr-example
 
 on:
   push:
