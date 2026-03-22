@@ -48,23 +48,15 @@ Adds highlighting in the dialogue editor. Click on the warning icon in the gutte
 
 ![Code edit example](.github/assets/code%20edit%20addon.png)
 
-## Type Coverage
+## Syntax Coverage
 
-In general, I use DM with a top-level member access or autoload member access, and rarely with any nested logic. As such, I've focused the coverage for these use-cases. I tried to make the current analyzer as forgiving as possible for nested expressions, but as I want to leave it open to improvement for more in-depth analysis, there may be some false positives (i.e. assumed error). If anyone wants to either (1) implement analysis for these or (2) suppress the analyzer from reporting these as errors, feel free to open a PR.
+The current analyzer should cover most basic use-cases that is valid expressions for Dialogue Manager, but there are a few exceptions and limitations. Some of them are just not implemented yet and may either be ignored or a false positive. Others are limitation due to GDScript's reflection API.
 
-| Case                       | Example                                                 | Covered        |
-| -------------------------- | ------------------------------------------------------- | -------------- |
-| Top-level expressions      | `do function() # from using or shortcuts`               | **yes**        |
-| Extra auto-complete source | `do function() # from extra auto-complete source`       | false-positive |
-| Nested expression          | `do Autoload.function()`                                | **yes**        |
-| if statements              | `if Autoload.member`                                    | **yes**        |
-| set statements             | `set Autoload.member = 1 # assignment type not checked` | ignored        |
-| Function signature         | `do function(1,"123")`                                  | ignored        |
-| C# async methods           | `do DotnetAutoload.AsyncTask()`                         | **yes**        |
-| Enums                      | `Autoload.Enum.A`                                       | **yes**        |
-| Static                     | `Autoload.Class.static_func()`                          | **yes**        |
-| In-line mutation           | `NPC: Hey! [do wait(0.1)]Who are you?`                  | **yes**        |
-| Built-in types             | `do Autoload.queue_free()`                              | **yes**        |
-| Nested expressions         | `do function(Autoload.member)`                          | ignored        |
-| Chain functions            | `do get_tree().quit()`                                  | ignored        |
-| Snippets                   | `import "res://snippets.dialogues" as snippets`         | not tested     |
+| Syntax             | Example                               | Comment                                                                                                                                         |
+| ------------------ | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Function argument  | `function("arg1", 2)`                 | Not implemented.                                                                                                                                |
+| Nested expressions | `function(GameManager.data)`          | Not implemented.                                                                                                                                |
+| Chained function   | `get_tree().quit()`                   | Not implemented.                                                                                                                                |
+| Assignments        | `GameManager.string_val == 23`        | Not implemented.                                                                                                                                |
+| Built-in types     | `GameManager.string_val.to_lowered()` | GDScript does not expose function API for built-in types. Could be manually coded, but likely not worth the overhead.                           |
+| Static member      | `GameManager.static_node.queue_fre()` | GDScript does not expose API to query static members. Partially implemented with regex search, but cannot consistently obtain member type info. |

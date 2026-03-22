@@ -122,6 +122,8 @@ static func _parse_expression_list(tokens: Array) -> Array[ASTNode]:
 
 #region Verification
 
+var STATIC_REGEX: RegEx = RegEx.create_from_string("^static var (?<property>[a-zA-Z_0-9]+)(:\\s?(?<type>[a-zA-Z_0-9]+))?")
+
 ## Verifies the type correctness of an expression.
 ## [base_classes] is the parent class to check. It's a list only because DM allows multiple usings / shortcuts, so at the top level there may be multiple autoloads to check from.
 ## [ClassType] is a basic wrapper over a Script/built-in class
@@ -195,13 +197,22 @@ func _verify_expression(node: ASTNode, base_classes: Array[ClassType], base: AST
 					else:
 						# Not tail, attempt to find script
 						if property_info.has("class_name"):
-							member_class = BuiltinType.new(property_info["class_name"])
-							for class_data: Dictionary in ProjectSettings.get_global_class_list():
-								if class_data.get(&"class") == property_info["class_name"]:
-									member_class = ScriptType.new(load(class_data.path))
+							member_class = _get_classtype_for_class_name(property_info["class_name"])
 						if member_class:
 							break
-
+			# Still not found, might be static var
+			if class_type is ScriptType and (class_type.class_script as Script).source_code.contains("static var"):
+				for line: String in class_type.class_script.source_code.split("\n"):
+					var matched: RegExMatch = STATIC_REGEX.search(line)
+					if matched and matched.strings[matched.names.property] == node.identifier:
+						# Tail and found value, OK
+						if node.next == null:
+							return TypeError.ok()
+						# Not tail, check if type avail
+						else:
+							if matched.names.has("type"):
+								var type: String = matched.strings[matched.names.type]
+								member_class = _get_classtype_for_class_name(type)
 		if member_class == null:
 			return UnknownProperty.new(node, base, base_classes[0] if not base_classes.size() > 0 else null, is_static)
 		if node.next != null:
@@ -226,6 +237,18 @@ static func _get_autoload_script(autoload: StringName) -> Script:
 		# Script or null
 		return autoload_res
 
+static func _get_classtype_for_class_name(class_name_to_find: String) -> ClassType:
+	if class_name_to_find == "": return null
+
+	for class_data: Dictionary in ProjectSettings.get_global_class_list():
+		if class_data.get(&"class") == class_name_to_find:
+			return ScriptType.new(load(class_data.path))
+	
+	if ClassDB.class_exists(class_name_to_find):
+		return BuiltinType.new(class_name_to_find)
+
+	return null
+
 #endregion
 
 #region ClassType
@@ -241,6 +264,8 @@ class BuiltinType extends ClassType:
 	var _type_name: StringName
 	func _init(type_name: StringName) -> void:
 		_type_name = type_name
+	func _to_string() -> String:
+		return "BuiltinType(%s)" % _type_name
 	func get_class_name() -> String:
 		return _type_name
 	func get_class_property_list() -> Array[Dictionary]:
@@ -251,20 +276,22 @@ class BuiltinType extends ClassType:
 		return {}
 
 class ScriptType extends ClassType:
-	var _class_script: Script
+	var class_script: Script
 	## Used in case of a non-global autoload class
 	var _autoload_name: String = ""
-	func _init(class_script: Script, autoload_name: String = "") -> void:
-		_class_script = class_script
+	func _init(p_class_script: Script, autoload_name: String = "") -> void:
+		class_script = p_class_script
 		_autoload_name = autoload_name
+	func _to_string() -> String:
+		return "ScriptType(%s)" % class_script
 	func get_class_name() -> String:
-		return _autoload_name if _autoload_name != "" else _class_script.get_global_name()
+		return _autoload_name if _autoload_name != "" else class_script.get_global_name()
 	func get_class_property_list() -> Array[Dictionary]:
-		return _class_script.get_script_property_list() + ClassDB.class_get_property_list(_class_script.get_instance_base_type())
+		return class_script.get_script_property_list() + ClassDB.class_get_property_list(class_script.get_instance_base_type())
 	func get_class_method_list() -> Array[Dictionary]:
-		return _class_script.get_script_method_list() + ClassDB.class_get_method_list(_class_script.get_instance_base_type())
+		return class_script.get_script_method_list() + ClassDB.class_get_method_list(class_script.get_instance_base_type())
 	func get_class_constant_map() -> Dictionary:
-		return _class_script.get_script_constant_map()
+		return class_script.get_script_constant_map()
 
 #endregion
 
@@ -348,7 +375,7 @@ class UnknownProperty extends TypeError:
 			base_context += " (%s)" % type_class_name
 		if base == node:
 			base_context = "usings or state autoload shortcuts"
-		super._init(TypeErrorType.UnknownMember, 'Could not find %s "%s" in %s.' % ["property" if not is_static else "static variable", node.identifier, base_context])
+		super._init(TypeErrorType.UnknownMember, 'Could not find %s "%s" in %s.' % ["property" if not is_static else "static variable or constant", node.identifier, base_context])
 
 class UnknownMethod extends TypeError:
 	func _init(node: ASTNode, base: ASTNode, type: ClassType) -> void:

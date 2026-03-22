@@ -13,9 +13,12 @@ do GlobalEnum.A
 do Autoload.Enum
 do Autoload.Enum.A
 # Constants
+do Autoload.static_member
+do Autoload.static_member.global_position
 do Autoload.TestConstant
 do Autoload.SubClass
-do Autoload.SubClass.Constant
+do Autoload.SubClass.SubConstant
+#do Autoload.SubClass.static_member
 do Autoload.SubClass.static_func()
 do Autoload.get_parent()
 do Autoload.node2d.global_position
