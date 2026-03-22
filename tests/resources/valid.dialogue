@@ -3,10 +3,17 @@ using DialogueAutoload
 ~ start
 
 Info: Starting valid dialogue.
+do GlobalEnum
 
+# Built-ins
+do wait(0.1)
+do debug("Hello")
+# Base
 do test_global()
 do test_using()
 do Autoload.test_autoload()
+# Nested expressions
+do debug(test_global())
 # Enums
 do GlobalEnum
 do GlobalEnum.A
@@ -18,7 +25,6 @@ do Autoload.static_member.global_position
 do Autoload.TestConstant
 do Autoload.SubClass
 do Autoload.SubClass.SubConstant
-#do Autoload.SubClass.static_member
 do Autoload.SubClass.static_func()
 do Autoload.get_parent()
 do Autoload.node2d.global_position

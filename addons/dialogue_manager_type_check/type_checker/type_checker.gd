@@ -53,10 +53,7 @@ func check_type(dialogue: DialogueResource) -> Dictionary[int, TypeError]:
 
 		var items: Array[ASTNode] = _parse_expression_list(expressions)
 		for item in items:
-			if item is ASTFunc && item.identifier in BUILT_IN_FUNCS:
-				continue
-
-			var err = _verify_expression(item, global_scripts, item)
+			var err = _verify_expression(item, null, global_scripts, item)
 			if not err.is_ok():
 				errors[line_no] = err
 	return errors
@@ -84,9 +81,9 @@ static func _parse_expression_list(tokens: Array) -> Array[ASTNode]:
 				var func_node = ASTFunc.new()
 				func_node.identifier = token[&"function"]
 				# Recursive Step: DM stores function args as nested arrays/tokens
-				if token.has(&"arguments"):
-					for arg_tokens in token[&"arguments"]:
-						func_node.args.append(_parse_expression_list(arg_tokens)[0])
+				if token.has(&"value"):
+					for arg_tokens in token[&"value"]:
+						func_node.args += _parse_expression_list(arg_tokens)
 				new_node = func_node
 				
 			DMConstants.TOKEN_STRING, DMConstants.TOKEN_NUMBER, DMConstants.TOKEN_BOOL:
@@ -125,26 +122,41 @@ static func _parse_expression_list(tokens: Array) -> Array[ASTNode]:
 var STATIC_REGEX: RegEx = RegEx.create_from_string("^static var (?<property>[a-zA-Z_0-9]+)(:\\s?(?<type>[a-zA-Z_0-9]+))?")
 
 ## Verifies the type correctness of an expression.
-## [base_classes] is the parent class to check. It's a list only because DM allows multiple usings / shortcuts, so at the top level there may be multiple autoloads to check from.
 ## [ClassType] is a basic wrapper over a Script/built-in class
-func _verify_expression(node: ASTNode, base_classes: Array[ClassType], base: ASTNode, is_static := false) -> TypeError:
+func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: Array[ClassType], base: ASTNode, is_static := false) -> TypeError:
+	var base_classes := global_classes
+	if parent_class != null:
+		base_classes = []
+		base_classes.assign([parent_class])
+	
 	if node is ASTOp:
-		pass # TODO
+		return TypeError.ok()
 	elif node is ASTLiteral:
-		pass # TODO
+		return TypeError.ok()
 	elif node is ASTFunc:
+		var found_method: Dictionary = {}
 		for class_type in base_classes:
 			for method_info in class_type.get_class_method_list():
 				if method_info.name == node.identifier:
 					if is_static and not (method_info.flags & MethodFlags.METHOD_FLAG_STATIC):
 						return StaticFuncAccess.new(node, base)
-					return TypeError.ok()
+					found_method = method_info
 			# Maybe a cs async function
 			if _cs_type_checker and class_type.resource_path.ends_with(".cs"):
 				var method_info = _cs_type_checker.GetCsScriptMethodInfo(class_type, node.identifier)
 				if method_info != null:
-					return TypeError.ok()
-		return UnknownMethod.new(node, base, base_classes[0] if base_classes.size() > 0 else null)
+					found_method = method_info
+		
+		if not found_method.is_empty() or node.identifier in BUILT_IN_FUNCS:
+			# Check args
+			for arg in node.args:
+				var err := _verify_expression(arg, null, global_classes, arg) # reset context as it's not chained
+				if not err.is_ok():
+					return err
+
+			return TypeError.ok()
+
+		return UnknownMethod.new(node, base, parent_class)
 	# Must be member then
 	else:
 		var member_class: ClassType = null
@@ -158,27 +170,25 @@ func _verify_expression(node: ASTNode, base_classes: Array[ClassType], base: AST
 		for class_type in base_classes:
 			# Check static context first; constants and enums
 			var constant_map := class_type.get_class_constant_map()
-			for name in constant_map:
-				var value: Variant = constant_map[name]
-				if name != node.identifier:
-					continue
+			var constant_val: Variant = constant_map.get(node.identifier)
+			if constant_val != null:
 				# Class
-				if value is Script:
+				if constant_val is Script:
 					if node.next == null:
 						# Weird subclass expression (MyClass.SubClass), but technically valid
 						return TypeError.ok()
-					member_class = ScriptType.new(value)
+					member_class = ScriptType.new(constant_val)
 					member_static = true
 					break
 				# Enum
-				if value is Dictionary:
+				if constant_val is Dictionary:
 					if node.next == null:
 						# Weird enum base expression (MyClass.MyEnum), but technically valid
 						return TypeError.ok()
 					# If enum access, must only have tail next
 					if node.next != null and node.next.next == null:
 						var enum_value = node.next.identifier
-						if value.has(enum_value):
+						if constant_val.has(enum_value):
 							return TypeError.ok()
 						else:
 							return UnknownEnum.new(node.next, base)
@@ -214,11 +224,11 @@ func _verify_expression(node: ASTNode, base_classes: Array[ClassType], base: AST
 								var type: String = matched.strings[matched.names.type]
 								member_class = _get_classtype_for_class_name(type)
 		if member_class == null:
-			return UnknownProperty.new(node, base, base_classes[0] if not base_classes.size() > 0 else null, is_static)
+			return UnknownProperty.new(node, base, parent_class, is_static)
 		if node.next != null:
-			return _verify_expression(node.next, [member_class], base, member_static)
+			return _verify_expression(node.next, member_class, global_classes, base, member_static)
 		return UnknownProperty.new(node, base, member_class, is_static)
-	return UnknownProperty.new(node, base, base_classes[0] if not base_classes.size() > 0 else null, is_static)
+	return UnknownProperty.new(node, base, parent_class, is_static)
 
 static func _get_autoload_script(autoload: StringName) -> Script:
 	var setting = ProjectSettings.get("autoload/%s" % autoload)
@@ -303,11 +313,17 @@ class ASTNode:
 		var display = identifier
 		var node := next
 
+		const MAX := 99
+		var i := 0
 		while node != null:
 			if node == target_node:
 				return display
 			display += "." + node.identifier
 			node = node.next
+			i += 1
+			if i > MAX:
+				push_error("Too many nodes in path")
+				break
 		return display
 
 	func _to_string() -> String:
@@ -327,6 +343,9 @@ class ASTNode:
 
 class ASTFunc extends ASTNode:
 	var args: Array[ASTNode] = []
+
+	func _to_string() -> String:
+		return super._to_string() + "(" + str(args) + ")"
 
 class ASTLiteral extends ASTNode:
 	pass
