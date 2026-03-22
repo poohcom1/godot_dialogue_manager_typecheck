@@ -74,8 +74,13 @@ static func _parse_expression_list(tokens: Array) -> Array[ASTNode]:
 		
 		match token.type:
 			DMConstants.TOKEN_VARIABLE:
-				new_node = ASTNode.new()
-				new_node.identifier = token[&"value"]
+				# Not sure why bool tokens are compiled as var, but whatever
+				if token[&"value"] in ["true", "false"]:
+					new_node = ASTLiteral.new()
+					new_node.identifier = token[&"value"]
+				else:
+					new_node = ASTNode.new()
+					new_node.identifier = token[&"value"]
 				
 			DMConstants.TOKEN_FUNCTION:
 				var func_node = ASTFunc.new()

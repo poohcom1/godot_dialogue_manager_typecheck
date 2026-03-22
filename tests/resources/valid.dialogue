@@ -3,11 +3,12 @@ using DialogueAutoload
 ~ start
 
 Info: Starting valid dialogue.
-do GlobalEnum
+do true
 
-# Built-ins
+# Built-ins / literals
 do wait(0.1)
 do debug("Hello")
+do debug(true)
 # Base
 do test_global()
 do test_using()
