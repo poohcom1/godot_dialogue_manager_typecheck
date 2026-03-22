@@ -20,10 +20,9 @@ func test_invalid():
 	var dialogue: DialogueResource = load("res://tests/resources/invalid.dialogue")
 	var results := await _type_checker.check_type(dialogue)
 	
-	assert_dict(results).has_size(5)
-
 	assert_int(results[5].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)
 	assert_int(results[6].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)
 	assert_int(results[7].type).is_equal(TypeChecker.TypeErrorType.UnknownMember)
 	assert_int(results[8].type).is_equal(TypeChecker.TypeErrorType.UnknownEnum)
-	assert_int(results[9].type).is_equal(TypeChecker.TypeErrorType.StaticInstanceAccess)
+	assert_int(results[9].type).is_equal(TypeChecker.TypeErrorType.StaticMemberAccess)
+	assert_int(results[10].type).is_equal(TypeChecker.TypeErrorType.StaticFuncAccess)

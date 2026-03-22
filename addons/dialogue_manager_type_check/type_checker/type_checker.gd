@@ -134,6 +134,8 @@ func _verify_expression(node: ASTNode, base_classes: Array[ClassType], base: AST
 		for class_type in base_classes:
 			for method_info in class_type.get_class_method_list():
 				if method_info.name == node.identifier:
+					if is_static and not (method_info.flags & MethodFlags.METHOD_FLAG_STATIC):
+						return StaticFuncAccess.new(node, base)
 					return TypeError.ok()
 			# Maybe a cs async function
 			if _cs_type_checker and class_type.resource_path.ends_with(".cs"):
@@ -205,7 +207,7 @@ func _verify_expression(node: ASTNode, base_classes: Array[ClassType], base: AST
 		if node.next != null:
 			return _verify_expression(node.next, [member_class], base, member_static)
 		return UnknownProperty.new(node, base, member_class, is_static)
-	return TypeError.ok()
+	return UnknownProperty.new(node, base, base_classes[0] if not base_classes.size() > 0 else null, is_static)
 
 static func _get_autoload_script(autoload: StringName) -> Script:
 	var setting = ProjectSettings.get("autoload/%s" % autoload)
@@ -224,6 +226,9 @@ static func _get_autoload_script(autoload: StringName) -> Script:
 		# Script or null
 		return autoload_res
 
+#endregion
+
+#region ClassType
 ## Helper wrapper for Script / built-in class
 @abstract class ClassType:
 	# API
@@ -311,8 +316,8 @@ enum TypeErrorType {
 	UnknownMember = 1,
 	UnknownMethod = 2,
 	UnknownEnum = 3,
-	StaticInstanceAccess = 4,
-	LocalVariant = 5,
+	StaticMemberAccess = 4,
+	StaticFuncAccess = 5,
 }
 
 class TypeError:
@@ -362,6 +367,10 @@ class UnknownEnum extends TypeError:
 
 class StaticInstanceAccess extends TypeError:
 	func _init(node: ASTNode, base: ASTNode) -> void:
-		super._init(TypeErrorType.StaticInstanceAccess, 'Cannot access instance member "%s" from "%s" in a static context.' % [node.identifier, base.get_path_to(node)])
+		super._init(TypeErrorType.StaticMemberAccess, 'Cannot access instance member "%s" from "%s" in a static context.' % [node.identifier, base.get_path_to(node)])
+
+class StaticFuncAccess extends TypeError:
+	func _init(node: ASTNode, base: ASTNode) -> void:
+		super._init(TypeErrorType.StaticFuncAccess, 'Cannot access non-static function "%s"() from "%s" in a static context.' % [node.identifier, base.get_path_to(node)])
 
 #endregion

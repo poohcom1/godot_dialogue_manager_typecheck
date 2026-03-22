@@ -62,8 +62,9 @@ In general, I use DM with a top-level member access or autoload member access, a
 | Function signature         | `do function(1,"123")`                                  | ignored        |
 | C# async methods           | `do DotnetAutoload.AsyncTask()`                         | **yes**        |
 | Enums                      | `Autoload.Enum.A`                                       | **yes**        |
-| Static                     | `Autoload.Class.static_func()`                          | false-positive |
-| Nested expressions         | `do function(Autoload.member)`                          | ignored        |
+| Static                     | `Autoload.Class.static_func()`                          | **yes**        |
 | In-line mutation           | `NPC: Hey! [do wait(0.1)]Who are you?`                  | **yes**        |
+| Built-in types             | `do Autoload.queue_free()`                              | **yes**        |
+| Nested expressions         | `do function(Autoload.member)`                          | ignored        |
+| Chain functions            | `do get_tree().quit()`                                  | ignored        |
 | Snippets                   | `import "res://snippets.dialogues" as snippets`         | not tested     |
-| Built-in types             | `do Autoload.queue_free()`                              | not tested     |

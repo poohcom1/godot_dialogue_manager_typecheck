@@ -14,10 +14,11 @@ do Autoload.Enum
 do Autoload.Enum.A
 # Constants
 do Autoload.TestConstant
-do Autoload.TestClass
-do Autoload.TestClass.TestClassContant
+do Autoload.SubClass
+do Autoload.SubClass.Constant
+do Autoload.SubClass.static_func()
 do Autoload.get_parent()
-do Autoload.node2d.name
+do Autoload.node2d.global_position
 
 Info: Finished valid dialogue.
 
