@@ -5,5 +5,9 @@ using DialogueAutoload
 do test_global()
 do test_using()
 do Autoload.test_autoload()
+do GlobalEnum
+do GlobalEnum.A
+do Autoload.Enum
+do Autoload.Enum.A
 
 => END

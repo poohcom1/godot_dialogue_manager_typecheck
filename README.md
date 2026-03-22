@@ -61,7 +61,7 @@ In general, I use DM with a top-level member access or autoload member access, a
 | set statements             | `set Autoload.member = 1 # assignment type not checked` | ignored        |
 | Function signature         | `do function(1,"123")`                                  | ignored        |
 | C# async methods           | `do DotnetAutoload.AsyncTask()`                         | **yes**        |
-| Enums                      | `Autoload.Enum.A`                                       | false-positive |
+| Enums                      | `Autoload.Enum.A`                                       | **yes**        |
 | Static                     | `Autoload.Class.static_func()`                          | false-positive |
 | Nested expressions         | `do function(Autoload.member)`                          | ignored        |
 | In-line mutation           | `NPC: Hey! [do wait(0.1)]Who are you?`                  | **yes**        |

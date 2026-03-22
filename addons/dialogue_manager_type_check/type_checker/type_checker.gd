@@ -52,12 +52,12 @@ func check_type(dialogue: DialogueResource) -> Dictionary[int, TypeError]:
 		if len(expressions) == 0:
 			continue
 
-		var items: Array[TreeNode] = _parse_expression_list(expressions)
+		var items: Array[ASTNode] = _parse_expression_list(expressions)
 		for item in items:
-			if item is TreeFunction && item.identifier in BUILT_IN_FUNCS:
+			if item is ASTFunc && item.identifier in BUILT_IN_FUNCS:
 				continue
 
-			var err = _verify_item(item, global_scripts, item)
+			var err = _verify_expression(item, global_scripts, item)
 			if not err.is_ok():
 				errors[line_no] = err
 	return errors
@@ -65,24 +65,24 @@ func check_type(dialogue: DialogueResource) -> Dictionary[int, TypeError]:
 
 #region Parsing Helpers
 
-static func _parse_expression_list(tokens: Array) -> Array[TreeNode]:
-	var items: Array[TreeNode] = []
+static func _parse_expression_list(tokens: Array) -> Array[ASTNode]:
+	var items: Array[ASTNode] = []
 	var i := 0
 	
-	var current_base: TreeNode = null
-	var tail: TreeNode = null
+	var current_base: ASTNode = null
+	var tail: ASTNode = null
 
 	while i < tokens.size():
 		var token = tokens[i]
-		var new_node: TreeNode = null
+		var new_node: ASTNode = null
 		
 		match token.type:
 			DMConstants.TOKEN_VARIABLE:
-				new_node = TreeNode.new()
+				new_node = ASTNode.new()
 				new_node.identifier = token[&"value"]
 				
 			DMConstants.TOKEN_FUNCTION:
-				var func_node = TreeFunction.new()
+				var func_node = ASTFunc.new()
 				func_node.identifier = token[&"function"]
 				# Recursive Step: DM stores function args as nested arrays/tokens
 				if token.has(&"arguments"):
@@ -91,12 +91,12 @@ static func _parse_expression_list(tokens: Array) -> Array[TreeNode]:
 				new_node = func_node
 				
 			DMConstants.TOKEN_STRING, DMConstants.TOKEN_NUMBER, DMConstants.TOKEN_BOOL:
-				new_node = TreeLiteral.new()
+				new_node = ASTLiteral.new()
 				new_node.identifier = str(token[&"value"])
 			
 			DMConstants.TOKEN_OPERATOR, DMConstants.TOKEN_ASSIGNMENT, DMConstants.TOKEN_COMPARISON:
 				# Operators break the current chain and become their own 'item'
-				var op_node = TreeOperator.new()
+				var op_node = ASTOp.new()
 				op_node.token_type = token.type
 				items.append(op_node)
 				current_base = null # Reset for the next part of the expression
@@ -123,12 +123,14 @@ static func _parse_expression_list(tokens: Array) -> Array[TreeNode]:
 
 #region Verification
 
-func _verify_item(node: TreeNode, base_scripts: Array[Script], base: TreeNode) -> TypeError:
-	if node is TreeOperator:
+## Verifies the type correctness of an expression.
+## [base_script] is a list as top-level expressions can reference multiple autoloads.
+func _verify_expression(node: ASTNode, base_scripts: Array[Script], base: ASTNode, is_static := false) -> TypeError:
+	if node is ASTOp:
 		pass # TODO
-	elif node is TreeLiteral:
+	elif node is ASTLiteral:
 		pass # TODO
-	elif node is TreeFunction:
+	elif node is ASTFunc:
 		for script in base_scripts:
 			for method_info in script.get_script_method_list():
 				if method_info.name == node.identifier:
@@ -138,32 +140,56 @@ func _verify_item(node: TreeNode, base_scripts: Array[Script], base: TreeNode) -
 				var method_info = _cs_type_checker.GetCsScriptMethodInfo(script, node.identifier)
 				if method_info != null:
 					return TypeError.ok()
-		return TypeErrorUnknownMember.new(node, base, true)
+		return UnknownMethod.new(node, base)
 	# Must be member then
-	elif node.next != null:
-		var member_script: Script = null
-
-		for script in base_scripts:
-			for property_info in script.get_script_property_list():
-				if property_info.name == node.identifier:
-					member_script = _get_script_for_class_name(property_info.get("class_name", ""))
-					if member_script:
-						break
-		if member_script == null and base == node:
-			# Top level, look for autoloads
-			member_script = _get_autoload_script(node.identifier)
-		
-		if member_script == null:
-			return TypeErrorUnknownMember.new(node, base)
-		
-		return _verify_item(node.next, [member_script], base)
 	else:
+		var member_script: Script = null
+		var member_static := false
 
+		# Top level, look for autoloads
+		if base == node and member_script == null:
+			member_script = _get_autoload_script(node.identifier)
 		for script in base_scripts:
+			# Check for instance properties
 			for property_info in script.get_script_property_list():
 				if property_info.name == node.identifier:
-					return TypeError.ok()
-		return TypeErrorUnknownMember.new(node, base)
+					# Tail and found value, OK
+					if node.next == null:
+						return TypeError.ok()
+					else:
+						# Not tail, attempt to find script
+						member_script = _get_script_for_class_name(property_info.get("class_name", ""))
+						if member_script:
+							break
+			# Check for constants and enums
+			var constant_map := script.get_script_constant_map()
+			for name in constant_map:
+				var value: Variant = constant_map[name]
+				if name != node.identifier:
+					continue
+				# Class
+				if value is Script:
+					member_script = value
+					member_static = true
+					break
+				# Enum
+				if value is Dictionary:
+					if node.next == null:
+						# Weird enum base expression (MyClass.MyEnum), but technically valid
+						return TypeError.ok()
+					# If enum access, must only have tail next
+					if node.next != null and node.next.next == null:
+						var enum_value = node.next.identifier
+						if value.has(enum_value):
+							return TypeError.ok()
+						else:
+							return UnknownEnum.new(node.next, base)
+		if member_script == null:
+			return UnknownProperty.new(node, base)
+		if node.next != null:
+			return _verify_expression(node.next, [member_script], base, member_static)
+		return UnknownProperty.new(node, base)
+
 	
 	return TypeError.ok()
 
@@ -198,8 +224,8 @@ static func _get_script_for_class_name(class_name_to_find: String) -> Script:
 #region AST Classes
 
 ## Node to represent the AST
-class TreeNode:
-	func get_path_to(target_node: TreeNode) -> String:
+class ASTNode:
+	func get_path_to(target_node: ASTNode) -> String:
 		var display = identifier
 		var node := next
 
@@ -217,21 +243,21 @@ class TreeNode:
 			display += "." + node.identifier
 			node = node.next
 
-			if node is TreeNode:
+			if node is ASTNode:
 				display += "()"
 		return display
 
 	var identifier: String
-	var next: TreeNode
+	var next: ASTNode
 
 
-class TreeFunction extends TreeNode:
-	var args: Array[TreeNode] = []
+class ASTFunc extends ASTNode:
+	var args: Array[ASTNode] = []
 
-class TreeLiteral extends TreeNode:
+class ASTLiteral extends ASTNode:
 	pass
 
-class TreeOperator extends TreeNode:
+class ASTOp extends ASTNode:
 	var token_type: StringName
 
 
@@ -259,14 +285,24 @@ class TypeError:
 			return str(TypeErrorType.keys()[type])
 		return msg
 
-class TypeErrorUnknownMember extends TypeError:
-	func _init(node: TreeNode, base: TreeNode, is_function: bool = false) -> void:
+class UnknownProperty extends TypeError:
+	func _init(node: ASTNode, base: ASTNode) -> void:
 		var base_context = '"%s"' % base.get_path_to(node)
 		if base == node:
 			base_context = "usings or state autoload shortcuts"
-		
-		var member_name = "function" if is_function else "property"
-		var member_text = node.identifier + "()" if is_function else node.identifier
 
-		super._init(TypeErrorType.UnknownMember, 'Could not find %s "%s" in %s.' % [member_name, member_text, base_context])
+		super._init(TypeErrorType.UnknownMember, 'Could not find property "%s" in %s.' % [node.identifier, base_context])
+
+class UnknownMethod extends TypeError:
+	func _init(node: ASTNode, base: ASTNode) -> void:
+		var base_context = '"%s"' % base.get_path_to(node)
+		if base == node:
+			base_context = "usings or state autoload shortcuts"
+
+		super._init(TypeErrorType.UnknownMember, 'Could not find "%s()" in %s.' % [node.identifier, base_context])
+
+class UnknownEnum extends TypeError:
+	func _init(node: ASTNode, base: ASTNode) -> void:
+		super._init(TypeErrorType.UnknownMember, 'Could not find enum "%s" in "%s".' % [node.identifier, base.get_path_to(node)])
+
 #endregion
