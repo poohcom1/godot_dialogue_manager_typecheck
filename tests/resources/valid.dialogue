@@ -16,6 +16,8 @@ do Autoload.Enum.A
 do Autoload.TestConstant
 do Autoload.TestClass
 do Autoload.TestClass.TestClassContant
+do Autoload.get_parent()
+do Autoload.test_builtin_instance.name
 
 Info: Finished valid dialogue.
 
