@@ -4,7 +4,7 @@ using DialogueAutoload
 
 do test_globals() # Unknown func for global
 do Autoload.test_autoloads() # Unknown func for autoload
-do Autoload.test_member # Unknown func for autoload
+do Autoload.test_member # Unknown member for autoload
 do Autoload.Enum.AB # Unknown enum
 do Autoload.TestClass.test_class_member # Access instance member from static
 

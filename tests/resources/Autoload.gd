@@ -7,6 +7,10 @@ class TestClass:
 	var test_class_member: int
 
 var test_class_instance := TestClass.new()
+var node2d := Node2D.new()
+
+func _ready() -> void:
+	print(node2d.name)
 
 func test_autoload():
 	pass

@@ -21,6 +21,7 @@ func test_invalid():
 	var results := await _type_checker.check_type(dialogue)
 	
 	assert_dict(results).has_size(5)
+
 	assert_int(results[5].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)
 	assert_int(results[6].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)
 	assert_int(results[7].type).is_equal(TypeChecker.TypeErrorType.UnknownMember)

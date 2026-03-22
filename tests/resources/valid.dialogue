@@ -17,10 +17,10 @@ do Autoload.TestConstant
 do Autoload.TestClass
 do Autoload.TestClass.TestClassContant
 do Autoload.get_parent()
-do Autoload.test_builtin_instance.name
+do Autoload.node2d.name
 
 Info: Finished valid dialogue.
 
-#do get_tree().quit()
+do get_tree().quit()
 
 => END
