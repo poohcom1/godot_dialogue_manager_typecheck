@@ -10,8 +10,6 @@ var _cs_type_checker = null # don't preload as C# might not be compiled
 
 var _strict := false
 
-const BUILT_IN_FUNCS := [&"wait", &"Wait", &"debug", &"Debug"]
-
 func _init() -> void:
 	_dialogue_manager = DialogueManager.new()
 	if ProjectSettings.get("application/config/features").has("C#"):
@@ -141,6 +139,10 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 	elif node is ASTFunc:
 		var found_method: Dictionary = {}
 		for class_type in base_classes:
+			if parent_class == null:
+				for method_info in BUILT_IN_TYPES:
+					if method_info.name == node.identifier:
+						found_method = method_info
 			for method_info in class_type.get_class_method_list():
 				if method_info.name == node.identifier:
 					if is_static and not (method_info.flags & MethodFlags.METHOD_FLAG_STATIC):
@@ -152,7 +154,7 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 				if method_info != null:
 					found_method = method_info
 		
-		if not found_method.is_empty() or node.identifier in BUILT_IN_FUNCS:
+		if not found_method.is_empty():
 			# Check args
 			for arg in node.args:
 				var err := _verify_expression(arg, null, global_classes, arg) # reset context as it's not chained
@@ -332,28 +334,23 @@ class ASTNode:
 		return display
 
 	func _to_string() -> String:
-		var display = identifier
-		var node := next
-		while node != null:
-			display += "." + node.identifier
-			node = node.next
-
-			if node is ASTNode:
-				display += "()"
+		var display = "Node(%s)" % identifier
+		if next != null:
+			display += " -> " + str(next)
 		return display
 
 	var identifier: String
 	var next: ASTNode
 
-
 class ASTFunc extends ASTNode:
 	var args: Array[ASTNode] = []
 
 	func _to_string() -> String:
-		return super._to_string() + "(" + str(args) + ")"
+		return "Func(%s)" % identifier
 
 class ASTLiteral extends ASTNode:
-	pass
+	func _to_string() -> String:
+		return "Literal(%s)" % identifier
 
 class ASTOp extends ASTNode:
 	var token_type: StringName
@@ -424,4 +421,41 @@ class StaticFuncAccess extends TypeError:
 	func _init(node: ASTNode, base: ASTNode) -> void:
 		super._init(TypeErrorType.StaticFuncAccess, 'Cannot access non-static function "%s"() from "%s" in a static context.' % [node.identifier, base.get_path_to(node)])
 
+#endregion
+
+#region Constants
+
+const BUILT_IN_TYPES := [
+	# Custom string casting
+	{ &"name": "str", &"args": [{ &"name": "from", &"type": TYPE_NIL }], &"return": { &"type": TYPE_STRING } },
+	# Vectors
+	{ &"name": "Vector2", &"args": [{ &"name": "x", &"type": TYPE_FLOAT }, { &"name": "y", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_VECTOR2 } },
+	{ &"name": "Vector2i", &"args": [{ &"name": "x", &"type": TYPE_INT }, { &"name": "y", &"type": TYPE_INT }], &"return": { &"type": TYPE_VECTOR2I } },
+	{ &"name": "Vector3", &"args": [{ &"name": "x", &"type": TYPE_FLOAT }, { &"name": "y", &"type": TYPE_FLOAT }, { &"name": "z", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_VECTOR3 } },
+	{ &"name": "Vector3i", &"args": [{ &"name": "x", &"type": TYPE_INT }, { &"name": "y", &"type": TYPE_INT }, { &"name": "z", &"type": TYPE_INT }], &"return": { &"type": TYPE_VECTOR3I } },
+	{ &"name": "Vector4", &"args": [{ &"name": "x", &"type": TYPE_FLOAT }, { &"name": "y", &"type": TYPE_FLOAT }, { &"name": "z", &"type": TYPE_FLOAT }, { &"name": "w", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_VECTOR4 } },
+	{ &"name": "Vector4i", &"args": [{ &"name": "x", &"type": TYPE_INT }, { &"name": "y", &"type": TYPE_INT }, { &"name": "z", &"type": TYPE_INT }, { &"name": "w", &"type": TYPE_INT }], &"return": { &"type": TYPE_VECTOR4I } },
+	# Quaternion
+	{ &"name": "Quaternion", &"args": [{ &"name": "x", &"type": TYPE_FLOAT }, { &"name": "y", &"type": TYPE_FLOAT }, { &"name": "z", &"type": TYPE_FLOAT }, { &"name": "w", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_QUATERNION } },
+	# Callable Overloads
+	{ &"name": "Callable", &"args": [], &"return": { &"type": TYPE_CALLABLE } },
+	{ &"name": "Callable", &"args": [{ &"name": "method", &"type": TYPE_STRING_NAME }], &"return": { &"type": TYPE_CALLABLE } },
+	{ &"name": "Callable", &"args": [{ &"name": "object", &"type": TYPE_OBJECT }, { &"name": "method", &"type": TYPE_STRING_NAME }], &"return": { &"type": TYPE_CALLABLE } },
+	# Color Overloads
+	{ &"name": "Color", &"args": [], &"return": { &"type": TYPE_COLOR } },
+	{ &"name": "Color", &"args": [{ &"name": "from", &"type": TYPE_NIL }], &"return": { &"type": TYPE_COLOR } },
+	{ &"name": "Color", &"args": [{ &"name": "from", &"type": TYPE_NIL }, { &"name": "alpha", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_COLOR } },
+	{ &"name": "Color", &"args": [{ &"name": "r", &"type": TYPE_FLOAT }, { &"name": "g", &"type": TYPE_FLOAT }, { &"name": "b", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_COLOR } },
+	{ &"name": "Color", &"args": [{ &"name": "r", &"type": TYPE_FLOAT }, { &"name": "g", &"type": TYPE_FLOAT }, { &"name": "b", &"type": TYPE_FLOAT }, { &"name": "a", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_COLOR } },
+	# Resource Loading
+	{ &"name": "load", &"args": [{ &"name": "path", &"type": TYPE_STRING }], &"return": { &"type": TYPE_OBJECT } },
+	{ &"name": "Load", &"args": [{ &"name": "path", &"type": TYPE_STRING }], &"return": { &"type": TYPE_OBJECT } },
+	# Custom Logic / Dice
+	{ &"name": "roll_dice", &"args": [{ &"name": "sides", &"type": TYPE_INT }], &"return": { &"type": TYPE_INT } },
+	{ &"name": "RollDice", &"args": [{ &"name": "sides", &"type": TYPE_INT }], &"return": { &"type": TYPE_INT } },
+	{ &"name": "debug", &"args": [{ &"name": "message", &"type": TYPE_NIL }], &"return": { &"type": TYPE_NIL } },
+	{ &"name": "Debug", &"args": [{ &"name": "message", &"type": TYPE_NIL }], &"return": { &"type": TYPE_NIL } },
+	{ &"name": "wait", &"args": [{ &"name": "time", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_NIL } },
+	{ &"name": "Wait", &"args": [{ &"name": "time", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_NIL } },
+]
 #endregion

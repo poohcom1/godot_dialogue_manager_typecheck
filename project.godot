@@ -25,6 +25,7 @@ CSharpAutoload="*uid://5k1bnh7bi76m"
 [dialogue_manager]
 
 runtime/state_autoload_shortcuts=["Global"]
+runtime/advanced/uses_dotnet=true
 
 [dotnet]
 
