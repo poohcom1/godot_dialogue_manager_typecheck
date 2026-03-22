@@ -150,18 +150,7 @@ func _verify_expression(node: ASTNode, base_scripts: Array[Script], base: ASTNod
 		if base == node and member_script == null:
 			member_script = _get_autoload_script(node.identifier)
 		for script in base_scripts:
-			# Check for instance properties
-			for property_info in script.get_script_property_list():
-				if property_info.name == node.identifier:
-					# Tail and found value, OK
-					if node.next == null:
-						return TypeError.ok()
-					else:
-						# Not tail, attempt to find script
-						member_script = _get_script_for_class_name(property_info.get("class_name", ""))
-						if member_script:
-							break
-			# Check for constants and enums
+			# Check static context first; constants and enums
 			var constant_map := script.get_script_constant_map()
 			for name in constant_map:
 				var value: Variant = constant_map[name]
@@ -169,6 +158,9 @@ func _verify_expression(node: ASTNode, base_scripts: Array[Script], base: ASTNod
 					continue
 				# Class
 				if value is Script:
+					if node.next == null:
+						# Weird subclass expression (MyClass.SubClass), but technically valid
+						return TypeError.ok()
 					member_script = value
 					member_static = true
 					break
@@ -184,6 +176,24 @@ func _verify_expression(node: ASTNode, base_scripts: Array[Script], base: ASTNod
 							return TypeError.ok()
 						else:
 							return UnknownEnum.new(node.next, base)
+				else:
+					# Regular constant
+					return TypeError.ok()
+			# Check for instance context
+			for property_info in script.get_script_property_list():
+				if property_info.name == node.identifier:
+					if is_static:
+						# Attempted to access instance prop from static (i.e. MyClass.member)
+						return StaticInstanceAccess.new(node, base)
+					# Tail and found value, OK
+					if node.next == null:
+						return TypeError.ok()
+					else:
+						# Not tail, attempt to find script
+						member_script = _get_script_for_class_name(property_info.get("class_name", ""))
+						if member_script:
+							break
+
 		if member_script == null:
 			return UnknownProperty.new(node, base)
 		if node.next != null:
@@ -263,7 +273,10 @@ class ASTOp extends ASTNode:
 
 enum TypeErrorType {
 	Ok,
-	UnknownMember
+	UnknownMember,
+	UnknownMethod,
+	UnknownEnum,
+	StaticInstanceAccess,
 }
 
 class TypeError:
@@ -299,10 +312,14 @@ class UnknownMethod extends TypeError:
 		if base == node:
 			base_context = "usings or state autoload shortcuts"
 
-		super._init(TypeErrorType.UnknownMember, 'Could not find "%s()" in %s.' % [node.identifier, base_context])
+		super._init(TypeErrorType.UnknownMethod, 'Could not find "%s()" in %s.' % [node.identifier, base_context])
 
 class UnknownEnum extends TypeError:
 	func _init(node: ASTNode, base: ASTNode) -> void:
-		super._init(TypeErrorType.UnknownMember, 'Could not find enum "%s" in "%s".' % [node.identifier, base.get_path_to(node)])
+		super._init(TypeErrorType.UnknownEnum, 'Could not find enum "%s" in "%s".' % [node.identifier, base.get_path_to(node)])
+
+class StaticInstanceAccess extends TypeError:
+	func _init(node: ASTNode, base: ASTNode) -> void:
+		super._init(TypeErrorType.StaticInstanceAccess, 'Cannot access instance member "%s" from "%s" in a static context.' % [node.identifier, base.get_path_to(node)])
 
 #endregion

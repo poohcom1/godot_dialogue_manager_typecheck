@@ -2,12 +2,23 @@ using DialogueAutoload
 
 ~ start
 
+Info: Starting valid dialogue.
+
 do test_global()
 do test_using()
 do Autoload.test_autoload()
+# Enums
 do GlobalEnum
 do GlobalEnum.A
 do Autoload.Enum
 do Autoload.Enum.A
+# Constants
+do Autoload.TestConstant
+do Autoload.TestClass
+do Autoload.TestClass.TestClassContant
+
+Info: Finished valid dialogue.
+
+#do get_tree().quit()
 
 => END
