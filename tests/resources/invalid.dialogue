@@ -1,7 +1,6 @@
 using DialogueAutoload
 
 ~ start
-
 do unknown_func() # Unknown func for global
 do Autoload.unknown_func() # Unknown func for autoload
 do Autoload.unknown_member # Unknown member for autoload

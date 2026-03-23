@@ -9,10 +9,14 @@ do wait(0.1)
 do debug("Hello")
 do debug(true)
 do debug(Vector2(0, 0))
+do debug(Vector2(0, 0), true, "hello")
+do debug()
 # Base
 do test_global()
 do test_using()
 do Autoload.test_autoload()
+# Arg
+do test_args_typed(1, 2, Vector2(1, 1))
 # Nested expressions
 do debug(test_global())
 # Enums

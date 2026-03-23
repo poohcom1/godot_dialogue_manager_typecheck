@@ -88,7 +88,7 @@ static func _parse_expression_list(tokens: Array) -> Array[ASTNode]:
 			DMConstants.TOKEN_VARIABLE:
 				# Not sure why bool tokens are compiled as var, but whatever
 				if token[&"value"] in ["true", "false"]:
-					new_node = ASTLiteral.new()
+					new_node = ASTLiteral.new(TYPE_BOOL)
 					new_node.identifier = token[&"value"]
 				else:
 					new_node = ASTNode.new()
@@ -103,8 +103,14 @@ static func _parse_expression_list(tokens: Array) -> Array[ASTNode]:
 						func_node.args += _parse_expression_list(arg_tokens)
 				new_node = func_node
 				
-			DMConstants.TOKEN_STRING, DMConstants.TOKEN_NUMBER, DMConstants.TOKEN_BOOL:
-				new_node = ASTLiteral.new()
+			DMConstants.TOKEN_STRING:
+				new_node = ASTLiteral.new(TYPE_STRING)
+				new_node.identifier = str(token[&"value"])
+			DMConstants.TOKEN_NUMBER:
+				new_node = ASTLiteral.new(TYPE_FLOAT if str(token[&"value"]).contains(".") else TYPE_INT)
+				new_node.identifier = str(token[&"value"])
+			DMConstants.TOKEN_BOOL:
+				new_node = ASTLiteral.new(TYPE_BOOL)
 				new_node.identifier = str(token[&"value"])
 			
 			DMConstants.TOKEN_OPERATOR, DMConstants.TOKEN_ASSIGNMENT, DMConstants.TOKEN_COMPARISON:
@@ -147,9 +153,9 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 		base_classes.assign([parent_class])
 	
 	if node is ASTOp:
-		return TypeError.ok()
+		return TypeError.ok(null)
 	elif node is ASTLiteral:
-		return TypeError.ok()
+		return TypeError.ok(BuiltinType.new(node.literal_type))
 	elif node is ASTFunc:
 		var found_method: Dictionary = {}
 		for class_type in base_classes:
@@ -169,13 +175,28 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 					found_method = method_info
 		
 		if not found_method.is_empty():
+			# Check args count
+			var vararg_method := bool(found_method.get("flags", 1) & METHOD_FLAG_VARARG)
+			var expected_arg_count := len(found_method.get("args", []))
+			var actual_arg_count := len(node.args)
+			var default_arg_count := len(found_method.get("default", []))
+
+			var correct_arg_count = (
+				actual_arg_count >= expected_arg_count
+				&& (actual_arg_count <= expected_arg_count + default_arg_count or vararg_method)
+			)
+
+			if not correct_arg_count:
+				return ArgsCount.new(found_method.get("args", []).size(), node.args.size(), node, base)
+
 			# Check args
 			for arg in node.args:
 				var err := _verify_expression(arg, null, global_classes, arg) # reset context as it's not chained
 				if not err.is_ok():
 					return err
+				
 
-			return TypeError.ok()
+			return TypeError.ok(_get_classtype_from_property_info(found_method.get("return", {})))
 
 		return UnknownMethod.new(node, base, parent_class)
 	# Must be member then
@@ -195,27 +216,27 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 			if constant_val != null:
 				# Class
 				if constant_val is Script:
-					if node.next == null:
-						# Weird subclass expression (MyClass.SubClass), but technically valid
-						return TypeError.ok()
 					member_class = ScriptType.new(constant_val)
 					member_static = true
+					if node.next == null:
+						# Weird subclass expression (MyClass.SubClass), but technically valid
+						return TypeError.ok(member_class)
 					break
 				# Enum
 				if constant_val is Dictionary:
 					if node.next == null:
 						# Weird enum base expression (MyClass.MyEnum), but technically valid
-						return TypeError.ok()
+						return TypeError.ok(BuiltinType.new(TYPE_DICTIONARY))
 					# If enum access, must only have tail next
 					if node.next != null and node.next.next == null:
 						var enum_value = node.next.identifier
 						if constant_val.has(enum_value):
-							return TypeError.ok()
+							return TypeError.ok(BuiltinType.new(TYPE_DICTIONARY))
 						else:
 							return UnknownEnum.new(node.next, base)
 				else:
 					# Regular constant
-					return TypeError.ok()
+					return TypeError.ok(BuiltinType.new(typeof(constant_val)))
 			# Check for instance context
 			for property_info in class_type.get_class_property_list():
 				if property_info.name == node.identifier:
@@ -224,7 +245,7 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 						return StaticInstanceAccess.new(node, base)
 					# Tail and found value, OK
 					if node.next == null:
-						return TypeError.ok()
+						return TypeError.ok(_get_classtype_from_property_info(property_info))
 					else:
 						# Not tail, attempt to find script
 						if property_info.has("class_name"):
@@ -238,7 +259,7 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 					if matched and matched.strings[matched.names.property] == node.identifier:
 						# Tail and found value, OK
 						if node.next == null:
-							return TypeError.ok()
+							return TypeError.ok(VariantType.new()) # can't infer static type
 						# Not tail, check if type avail
 						else:
 							if matched.names.has("type"):
@@ -269,60 +290,26 @@ static func _get_autoload_script(autoload: StringName) -> Script:
 		return autoload_res
 
 static func _get_classtype_for_class_name(class_name_to_find: String) -> ClassType:
-	if class_name_to_find == "": return null
+	if class_name_to_find == "": return VariantType.new()
 
 	for class_data: Dictionary in ProjectSettings.get_global_class_list():
 		if class_data.get(&"class") == class_name_to_find:
 			return ScriptType.new(load(class_data.path))
 	
 	if ClassDB.class_exists(class_name_to_find):
-		return BuiltinType.new(class_name_to_find)
+		return EngineTypes.new(class_name_to_find)
 
-	return null
+	return VariantType.new()
 
-#endregion
+static func _get_classtype_from_property_info(property_info: Dictionary) -> ClassType:
+	if property_info.is_empty():
+		return VariantType.new()
+	if property_info["type"] == TYPE_OBJECT and property_info.has("class_name"):
+		return _get_classtype_for_class_name(property_info["class_name"])
+	elif property_info["type"] != TYPE_NIL:
+		return BuiltinType.new(property_info["type"])
+	return VariantType.new()
 
-#region ClassType
-## Helper wrapper for Script / built-in class
-@abstract class ClassType:
-	# API
-	@abstract func get_class_name() -> String
-	@abstract func get_class_property_list() -> Array[Dictionary]
-	@abstract func get_class_method_list() -> Array[Dictionary]
-	@abstract func get_class_constant_map() -> Dictionary
-
-class BuiltinType extends ClassType:
-	var _type_name: StringName
-	func _init(type_name: StringName) -> void:
-		_type_name = type_name
-	func _to_string() -> String:
-		return "BuiltinType(%s)" % _type_name
-	func get_class_name() -> String:
-		return _type_name
-	func get_class_property_list() -> Array[Dictionary]:
-		return ClassDB.class_get_property_list(_type_name)
-	func get_class_method_list() -> Array[Dictionary]:
-		return ClassDB.class_get_method_list(_type_name)
-	func get_class_constant_map() -> Dictionary:
-		return {}
-
-class ScriptType extends ClassType:
-	var class_script: Script
-	## Used in case of a non-global autoload class
-	var _autoload_name: String = ""
-	func _init(p_class_script: Script, autoload_name: String = "") -> void:
-		class_script = p_class_script
-		_autoload_name = autoload_name
-	func _to_string() -> String:
-		return "ScriptType(%s)" % class_script
-	func get_class_name() -> String:
-		return _autoload_name if _autoload_name != "" else class_script.get_global_name()
-	func get_class_property_list() -> Array[Dictionary]:
-		return class_script.get_script_property_list() + ClassDB.class_get_property_list(class_script.get_instance_base_type())
-	func get_class_method_list() -> Array[Dictionary]:
-		return class_script.get_script_method_list() + ClassDB.class_get_method_list(class_script.get_instance_base_type())
-	func get_class_constant_map() -> Dictionary:
-		return class_script.get_script_constant_map()
 
 #endregion
 
@@ -363,6 +350,9 @@ class ASTFunc extends ASTNode:
 		return "Func(%s)" % identifier
 
 class ASTLiteral extends ASTNode:
+	var literal_type: int
+	func _init(literal_type: int) -> void:
+		self.literal_type = literal_type
 	func _to_string() -> String:
 		return "Literal(%s)" % identifier
 
@@ -380,19 +370,23 @@ enum TypeErrorType {
 	UnknownEnum = 3,
 	StaticMemberAccess = 4,
 	StaticFuncAccess = 5,
+	ArgsCount = 6
 }
 
 class TypeError:
 	var type: TypeErrorType
 	var msg: String = ""
+	var expr_ret: ClassType
 
 	func _init(p_type: TypeErrorType, p_msg = "") -> void:
 		type = p_type
 		msg = p_msg
 
-	static func ok() -> TypeError:
-		return TypeError.new(TypeErrorType.Ok)
-	
+	static func ok(ret_type: ClassType) -> TypeError:
+		var err := TypeError.new(TypeErrorType.Ok)
+		err.expr_ret = ret_type
+		return err
+
 	func is_ok() -> bool:
 		return type == TypeErrorType.Ok
 	
@@ -435,9 +429,68 @@ class StaticFuncAccess extends TypeError:
 	func _init(node: ASTNode, base: ASTNode) -> void:
 		super._init(TypeErrorType.StaticFuncAccess, 'Cannot access non-static function "%s"() from "%s" in a static context.' % [node.identifier, base.get_path_to(node)])
 
+class ArgsCount extends TypeError:
+	func _init(expected: int, actual: int, node: ASTNode, base: ASTNode) -> void:
+		super._init(TypeErrorType.ArgsCount, 'Expected %d arguments, got %d in "%s()".' % [expected, actual, base.get_path_to(node)])
+
 #endregion
 
-#region Constants
+#region Class / Constants
+
+## Helper wrapper for Script / built-in class
+@abstract class ClassType:
+	# API
+	@abstract func get_class_name() -> String
+	@abstract func get_class_property_list() -> Array[Dictionary]
+	@abstract func get_class_method_list() -> Array[Dictionary]
+	@abstract func get_class_constant_map() -> Dictionary
+
+class BuiltinType extends ClassType:
+	var type: int
+	func _init(p_type: int) -> void: type = p_type
+	func _to_string(): return "BuiltinType(%s)" % type
+	func get_class_name(): return type
+	func get_class_property_list(): return []
+	func get_class_method_list(): return []
+	func get_class_constant_map(): return {}
+
+class VariantType extends BuiltinType:
+	func _init(): super._init(0)
+	func _to_string(): return "VariantType()"
+
+class EngineTypes extends ClassType:
+	var _type_name: StringName
+	func _init(type_name: StringName) -> void:
+		_type_name = type_name
+	func _to_string() -> String:
+		return "EngineTypes(%s)" % _type_name
+	func get_class_name() -> String:
+		return _type_name
+	func get_class_property_list() -> Array[Dictionary]:
+		return ClassDB.class_get_property_list(_type_name)
+	func get_class_method_list() -> Array[Dictionary]:
+		return ClassDB.class_get_method_list(_type_name)
+	func get_class_constant_map() -> Dictionary:
+		return {}
+
+class ScriptType extends ClassType:
+	var class_script: Script
+	## Used in case of a non-global autoload class
+	var _autoload_name: String = ""
+	func _init(p_class_script: Script, autoload_name: String = "") -> void:
+		class_script = p_class_script
+		_autoload_name = autoload_name
+	func _to_string() -> String:
+		return "ScriptType(%s)" % class_script
+	func get_class_name() -> String:
+		return _autoload_name if _autoload_name != "" else class_script.get_global_name()
+	func get_class_property_list() -> Array[Dictionary]:
+		return class_script.get_script_property_list() + ClassDB.class_get_property_list(class_script.get_instance_base_type())
+	func get_class_method_list() -> Array[Dictionary]:
+		return class_script.get_script_method_list() + ClassDB.class_get_method_list(class_script.get_instance_base_type())
+	func get_class_constant_map() -> Dictionary:
+		return class_script.get_script_constant_map()
+
 
 const BUILT_IN_TYPES := [
 	# Custom string casting
@@ -467,8 +520,8 @@ const BUILT_IN_TYPES := [
 	# Custom Logic / Dice
 	{ &"name": "roll_dice", &"args": [{ &"name": "sides", &"type": TYPE_INT }], &"return": { &"type": TYPE_INT } },
 	{ &"name": "RollDice", &"args": [{ &"name": "sides", &"type": TYPE_INT }], &"return": { &"type": TYPE_INT } },
-	{ &"name": "debug", &"args": [{ &"name": "message", &"type": TYPE_NIL }], &"return": { &"type": TYPE_NIL } },
-	{ &"name": "Debug", &"args": [{ &"name": "message", &"type": TYPE_NIL }], &"return": { &"type": TYPE_NIL } },
+	{ &"name": "debug", &"args": [], &"return": { &"type": TYPE_NIL }, &"flags": METHOD_FLAG_NORMAL | METHOD_FLAG_VARARG },
+	{ &"name": "Debug", &"args": [], &"return": { &"type": TYPE_NIL }, &"flags": METHOD_FLAG_NORMAL | METHOD_FLAG_VARARG },
 	{ &"name": "wait", &"args": [{ &"name": "time", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_NIL } },
 	{ &"name": "Wait", &"args": [{ &"name": "time", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_NIL } },
 ]
