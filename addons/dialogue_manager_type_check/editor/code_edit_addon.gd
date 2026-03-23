@@ -80,4 +80,5 @@ func _on_gutter_clicked(line: int, gutter: int) -> void:
 	var actual_line := line + 1
 	if _error_cache.has(actual_line):
 		var err := _error_cache[actual_line]
-		print_rich("[color=#d4c79e]● Type error at %d: %s" % [actual_line, err])
+		#print_rich("[color=#d4c79e]● Type error at %d: %s" % [actual_line, err])
+		push_warning("Type error at %d: %s" % [actual_line, err])
