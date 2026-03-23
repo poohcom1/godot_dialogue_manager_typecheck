@@ -28,4 +28,16 @@ func test_invalid():
 	assert_int(results[10].type).is_equal(TypeChecker.TypeErrorType.StaticFuncAccess)
 	assert_int(results[11].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)
 	assert_int(results[12].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)
-	assert_int(results[13].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)
+	
+	assert_int(results[13].type).is_equal(TypeChecker.TypeErrorType.ArgsCount)
+	
+	assert_int(results[14].type).is_equal(TypeChecker.TypeErrorType.ArgMismatch)
+	assert_str(results[14].msg).is_equal('Expected argument 1 to be of type int, got String in "test_args_typed()".')
+	
+	assert_int(results[15].type).is_equal(TypeChecker.TypeErrorType.ArgMismatch)
+	assert_str(results[15].msg).is_equal('Expected argument 2 to be of type String, got int in "test_args_typed()".')
+	
+	assert_int(results[16].type).is_equal(TypeChecker.TypeErrorType.ArgMismatch)
+	assert_str(results[16].msg).is_equal('Expected argument 3 to be of type Vector2, got int in "test_args_typed()".')
+	
+	assert_int(results[17].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)

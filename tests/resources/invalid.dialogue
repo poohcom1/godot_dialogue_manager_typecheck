@@ -1,5 +1,6 @@
 using DialogueAutoload
 
+
 ~ start
 do unknown_func() # Unknown func for global
 do Autoload.unknown_func() # Unknown func for autoload
@@ -9,5 +10,9 @@ do Autoload.SubClass.instance_member # Access instance member from static
 do Autoload.SubClass.instance_func() # Access to instance func from static
 do debug(unknown_func()) # Unknown inner arg
 do test_args(test_global(), unknown_func()) # Unkown 2nd inner arg
+do test_args_typed(12) # count mismatch
+do test_args_typed("12", "12", Vector2(0, 0))
+do test_args_typed(12, 12, Vector2(0, 0))
+do test_args_typed(12, "12", 12)
 do CSharpAutoload.UnknownFunction() # C# test
 => END
