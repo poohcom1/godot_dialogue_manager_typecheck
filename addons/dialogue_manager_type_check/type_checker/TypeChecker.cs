@@ -6,8 +6,10 @@ using System.Reflection;
 using Godot;
 using Godot.Collections;
 
-public partial class TypeChecker : RefCounted {
-    public Dictionary? GetCsScriptMethodInfo(Script script, string methodName) {
+public partial class TypeChecker : RefCounted
+{
+    public Dictionary GetCsScriptMethodInfo(Script script, string methodName)
+    {
         string typeName = script.ResourcePath.GetFile().GetBaseName();
         var type = Assembly.GetExecutingAssembly().GetTypes().FirstOrDefault(t => t.Name == typeName);
 
@@ -24,14 +26,16 @@ public partial class TypeChecker : RefCounted {
     }
 
     // Helper
-    private Dictionary BuildMethodDictionary(MethodInfo methodInfo) {
+    private static Dictionary BuildMethodDictionary(MethodInfo methodInfo)
+    {
         var args = new Array<Dictionary>();
-        foreach (var param in methodInfo.GetParameters()) {
+        foreach (var param in methodInfo.GetParameters())
+        {
             args.Add(
                 new Dictionary() {
                     { "name", param.Name ?? "" },
-                    { "type", (int)Variant.Type.Nil },
-                    { "class_name", GetFriendlyTypeName(param.ParameterType) },
+                    { "type", (int)GetVariantType(param.ParameterType) },
+                    { "class_name", new StringName() },
                 }
             );
         }
@@ -39,32 +43,37 @@ public partial class TypeChecker : RefCounted {
             { "name", methodInfo.Name },
             { "type", "method" },
             { "args", args },
+            { "return", new Dictionary() {
+                { "type", (int)GetVariantType(methodInfo.ReturnType) },
+                { "class_name", new StringName() }, }
+            },
         };
     }
 
-    private static string GetFriendlyTypeName(Type type) {
+    private static Variant.Type GetVariantType(Type type)
+    {
         if (type == typeof(int))
-            return "int";
+            return Variant.Type.Int;
         if (type == typeof(long))
-            return "long";
+            return Variant.Type.Int;
         if (type == typeof(float))
-            return "float";
+            return Variant.Type.Float;
         if (type == typeof(double))
-            return "double";
+            return Variant.Type.Float;
         if (type == typeof(bool))
-            return "bool";
+            return Variant.Type.Bool;
         if (type == typeof(string))
-            return "string";
+            return Variant.Type.String;
         if (type == typeof(void))
-            return "void";
+            return Variant.Type.Nil;
         if (type == typeof(byte))
-            return "byte";
+            return Variant.Type.Int;
         if (type == typeof(short))
-            return "short";
+            return Variant.Type.Int;
         if (type == typeof(char))
-            return "char";
+            return Variant.Type.Int;
         if (type == typeof(decimal))
-            return "decimal";
-        return type.Name;
+            return Variant.Type.Float;
+        return Variant.Type.Nil;
     }
 }

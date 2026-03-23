@@ -16,7 +16,7 @@ do test_global()
 do test_using()
 do Autoload.test_autoload()
 # Arg
-do test_args_typed(1, 2, Vector2(1, 1))
+do test_args_typed(1, "2", Vector2(1, 1))
 # Nested expressions
 do debug(test_global())
 # Enums

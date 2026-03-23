@@ -179,22 +179,30 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 			var vararg_method := bool(found_method.get("flags", 1) & METHOD_FLAG_VARARG)
 			var expected_arg_count := len(found_method.get("args", []))
 			var actual_arg_count := len(node.args)
-			var default_arg_count := len(found_method.get("default", []))
+			var default_arg_count := len(found_method.get("default_args", []))
 
 			var correct_arg_count = (
-				actual_arg_count >= expected_arg_count
-				&& (actual_arg_count <= expected_arg_count + default_arg_count or vararg_method)
+				(actual_arg_count >= expected_arg_count - default_arg_count && actual_arg_count <= expected_arg_count) or vararg_method
 			)
 
 			if not correct_arg_count:
 				return ArgsCount.new(found_method.get("args", []).size(), node.args.size(), node, base)
 
 			# Check args
-			for arg in node.args:
-				var err := _verify_expression(arg, null, global_classes, arg) # reset context as it's not chained
+			for i in range(len(node.args)):
+				var arg_node := (node as ASTFunc).args[i]
+				var err := _verify_expression(arg_node, null, global_classes, arg_node) # reset context as it's not chained
 				if not err.is_ok():
 					return err
 				
+				if len(found_method.args) <= i:
+					assert(vararg_method, "Arg exceeds method arg count, but method is not a vararg.")
+					continue
+				
+				var expected_arg: ClassType = _get_classtype_from_property_info(found_method.args[i])
+				var actual_arg: ClassType = err.expr_ret
+				if not ClassType.can_assign(actual_arg, expected_arg):
+					return ArgMismatch.new(i + 1, expected_arg, actual_arg, node, base)
 
 			return TypeError.ok(_get_classtype_from_property_info(found_method.get("return", {})))
 
@@ -297,7 +305,7 @@ static func _get_classtype_for_class_name(class_name_to_find: String) -> ClassTy
 			return ScriptType.new(load(class_data.path))
 	
 	if ClassDB.class_exists(class_name_to_find):
-		return EngineTypes.new(class_name_to_find)
+		return EngineType.new(class_name_to_find)
 
 	return VariantType.new()
 
@@ -370,7 +378,8 @@ enum TypeErrorType {
 	UnknownEnum = 3,
 	StaticMemberAccess = 4,
 	StaticFuncAccess = 5,
-	ArgsCount = 6
+	ArgsCount = 6,
+	ArgMismatch = 7
 }
 
 class TypeError:
@@ -433,6 +442,10 @@ class ArgsCount extends TypeError:
 	func _init(expected: int, actual: int, node: ASTNode, base: ASTNode) -> void:
 		super._init(TypeErrorType.ArgsCount, 'Expected %d arguments, got %d in "%s()".' % [expected, actual, base.get_path_to(node)])
 
+class ArgMismatch extends TypeError:
+	func _init(ind: int, expected: ClassType, actual: ClassType, node: ASTNode, base: ASTNode) -> void:
+		super._init(TypeErrorType.ArgMismatch, 'Expected argument %d to be of type %s, got %s in "%s()".' % [ind, expected.get_class_name(), actual.get_class_name(), base.get_path_to(node)])
+
 #endregion
 
 #region Class / Constants
@@ -445,11 +458,30 @@ class ArgsCount extends TypeError:
 	@abstract func get_class_method_list() -> Array[Dictionary]
 	@abstract func get_class_constant_map() -> Dictionary
 
+	static func can_assign(current: ClassType, target: ClassType) -> bool:
+		if current is VariantType or target is VariantType:
+			return true
+		if current is BuiltinType and target is BuiltinType:
+			return current.variant_type == target.variant_type or (current.variant_type == TYPE_INT and target.variant_type == TYPE_FLOAT)
+		if current is EngineType and target is EngineType:
+			return current.engine_type == target.engine_type or ClassDB.is_parent_class(current.engine_type, target.engine_type)
+		if current is ScriptType and target is ScriptType:
+			if current.script == target.script:
+				return true
+			var base_script: Script = current.script
+			while base_script != null:
+				if base_script == target.script:
+					return true
+				base_script = base_script.get_base_script()
+		if current is ScriptType and target is EngineType:
+			return can_assign(EngineType.new(current.get_instance_base_type), target)
+		
+		return false
 class BuiltinType extends ClassType:
-	var type: int
-	func _init(p_type: int) -> void: type = p_type
-	func _to_string(): return "BuiltinType(%s)" % type
-	func get_class_name(): return type
+	var variant_type: int
+	func _init(p_variant_type: int) -> void: variant_type = p_variant_type
+	func _to_string(): return "BuiltinType(%s)" % variant_type
+	func get_class_name(): return type_string(variant_type)
 	func get_class_property_list(): return []
 	func get_class_method_list(): return []
 	func get_class_constant_map(): return {}
@@ -458,18 +490,18 @@ class VariantType extends BuiltinType:
 	func _init(): super._init(0)
 	func _to_string(): return "VariantType()"
 
-class EngineTypes extends ClassType:
-	var _type_name: StringName
-	func _init(type_name: StringName) -> void:
-		_type_name = type_name
+class EngineType extends ClassType:
+	var engine_type: StringName
+	func _init(p_engine_type: StringName) -> void:
+		engine_type = p_engine_type
 	func _to_string() -> String:
-		return "EngineTypes(%s)" % _type_name
+		return "EngineType(%s)" % engine_type
 	func get_class_name() -> String:
-		return _type_name
+		return engine_type
 	func get_class_property_list() -> Array[Dictionary]:
-		return ClassDB.class_get_property_list(_type_name)
+		return ClassDB.class_get_property_list(engine_type)
 	func get_class_method_list() -> Array[Dictionary]:
-		return ClassDB.class_get_method_list(_type_name)
+		return ClassDB.class_get_method_list(engine_type)
 	func get_class_constant_map() -> Dictionary:
 		return {}
 
