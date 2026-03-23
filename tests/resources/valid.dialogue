@@ -27,6 +27,7 @@ do test_args_typed(1, "2", Vector2(1, 1))
 do debug(test_global())
 # Enums
 do GlobalEnum
+## Comment
 do GlobalEnum.A
 do Autoload.Enum
 do Autoload.Enum.A
@@ -41,7 +42,6 @@ do Autoload.get_parent()
 do Autoload.node2d.global_position
 # C#
 do CSharpAutoload.Function()
-
 
 Info: Finished valid dialogue.
 

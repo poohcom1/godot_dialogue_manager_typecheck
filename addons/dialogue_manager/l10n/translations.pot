@@ -74,7 +74,7 @@ msgstr ""
 msgid "insert.templates"
 msgstr ""
 
-msgid "insert.title"
+msgid "insert.cue"
 msgstr ""
 
 msgid "insert.dialogue"
@@ -98,10 +98,7 @@ msgstr ""
 msgid "insert.end_dialogue"
 msgstr ""
 
-msgid "generate_line_ids_for_project"
-msgstr ""
-
-msgid "generate_line_ids_for_file"
+msgid "generate_line_ids"
 msgstr ""
 
 msgid "generate_ids.warning_title"
@@ -206,7 +203,7 @@ msgstr ""
 msgid "files_list.filter"
 msgstr ""
 
-msgid "titles_list.filter"
+msgid "cues_list.filter"
 msgstr ""
 
 msgid "errors.key_not_found"
@@ -233,25 +230,25 @@ msgstr ""
 msgid "errors.unknown_using"
 msgstr ""
 
-msgid "errors.empty_title"
+msgid "errors.empty_cue"
 msgstr ""
 
-msgid "errors.duplicate_title"
+msgid "errors.duplicate_cue"
 msgstr ""
 
-msgid "errors.invalid_title_string"
+msgid "errors.invalid_cue_string"
 msgstr ""
 
-msgid "errors.invalid_title_number"
+msgid "errors.invalid_cue_number"
 msgstr ""
 
-msgid "errors.unknown_title"
+msgid "errors.unknown_cue"
 msgstr ""
 
-msgid "errors.jump_to_invalid_title"
+msgid "errors.jump_to_invalid_cue"
 msgstr ""
 
-msgid "errors.title_has_no_content"
+msgid "errors.cue_has_no_content"
 msgstr ""
 
 msgid "errors.invalid_expression"
@@ -450,4 +447,22 @@ msgid "runtime.top_level_states_share_name"
 msgstr ""
 
 msgid "translation_plugin.character_name"
+msgstr ""
+
+msgid "Regions & Cues"
+msgstr ""
+
+msgid "Regions"
+msgstr ""
+
+msgid "Cues"
+msgstr ""
+
+msgid "Auto"
+msgstr ""
+
+msgid "<empty>"
+msgstr ""
+
+msgid "Cue:"
 msgstr ""

@@ -30,7 +30,7 @@ func check_type(dialogue_lines: Dictionary, using_states: PackedStringArray) -> 
 	
 	# Analyze
 	var errors: Dictionary[int, TypeError] = {}
-	var ignores: Dictionary[int, bool] = {}
+	var ignores: Dictionary[int, bool] = {} # not working since 3.10.3 as raw text is removed
 
 	for key in dialogue_lines:
 		var line: Dictionary = dialogue_lines[key]
