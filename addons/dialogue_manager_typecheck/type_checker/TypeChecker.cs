@@ -12,12 +12,18 @@ public partial class TypeChecker : RefCounted
     public Dictionary GetCsScriptMethodInfo(Script script, string methodName)
     {
         string typeName = script.ResourcePath.GetFile().GetBaseName();
-        var type = Assembly.GetExecutingAssembly().GetTypes().FirstOrDefault(t => t.Name == typeName);
+        var type = Assembly
+            .GetExecutingAssembly()
+            .GetTypes()
+            .FirstOrDefault(t => t.Name == typeName);
 
         if (type == null)
             return null;
         var methodInfo = type.GetMethods(
-                BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly
+                BindingFlags.Instance
+                    | BindingFlags.Static
+                    | BindingFlags.Public
+                    | BindingFlags.DeclaredOnly
             )
             .FirstOrDefault(m => m.Name == methodName && !m.IsSpecialName);
         if (methodInfo == null)
@@ -33,20 +39,26 @@ public partial class TypeChecker : RefCounted
         foreach (var param in methodInfo.GetParameters())
         {
             args.Add(
-                new Dictionary() {
+                new Dictionary()
+                {
                     { "name", param.Name ?? "" },
                     { "type", (int)GetVariantType(param.ParameterType) },
                     { "class_name", new StringName() },
                 }
             );
         }
-        return new Dictionary() {
+        return new Dictionary()
+        {
             { "name", methodInfo.Name },
             { "type", "method" },
             { "args", args },
-            { "return", new Dictionary() {
-                { "type", (int)GetVariantType(methodInfo.ReturnType) },
-                { "class_name", new StringName() }, }
+            {
+                "return",
+                new Dictionary()
+                {
+                    { "type", (int)GetVariantType(methodInfo.ReturnType) },
+                    { "class_name", new StringName() },
+                }
             },
         };
     }
