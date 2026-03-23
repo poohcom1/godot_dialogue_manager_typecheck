@@ -5,6 +5,8 @@ const DialogueManager := preload("res://addons/dialogue_manager/dialogue_manager
 const DMSettings := preload("res://addons/dialogue_manager/settings.gd")
 const DMConstants := preload("res://addons/dialogue_manager/constants.gd")
 
+const IGNORE_COMMENT := "@type_ignore"
+
 var _dialogue_manager: DialogueManager
 var _cs_type_checker = null # don't preload as C# might not be compiled
 
@@ -28,6 +30,8 @@ func check_type(dialogue: DialogueResource) -> Dictionary[int, TypeError]:
 	
 	# Analyze
 	var errors: Dictionary[int, TypeError] = {}
+	var ignores: Dictionary[int, bool] = {}
+
 	for key in dialogue.lines:
 		var line: Dictionary = dialogue.lines[key]
 		var line_no = int(line[&"id"]) + 1
@@ -54,6 +58,16 @@ func check_type(dialogue: DialogueResource) -> Dictionary[int, TypeError]:
 			var err = _verify_expression(item, null, global_scripts, item)
 			if not err.is_ok():
 				errors[line_no] = err
+
+	var raw_lines := dialogue.raw_text.split("\n")
+	for i in range(len(raw_lines)):
+		var line := raw_lines[i]
+		if line.begins_with("#") and IGNORE_COMMENT in line.substr(1).split(" "):
+			ignores[i + 1] = true
+	
+	for line_no in ignores:
+		errors.erase(line_no + 1)
+
 	return errors
 
 

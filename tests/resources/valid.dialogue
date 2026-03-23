@@ -32,6 +32,11 @@ do Autoload.node2d.global_position
 # C#
 do CSharpAutoload.Function()
 
+# Ignore comment
+
+# @type_ignore
+do unknown_func()
+
 Info: Finished valid dialogue.
 
 do get_tree().quit()
