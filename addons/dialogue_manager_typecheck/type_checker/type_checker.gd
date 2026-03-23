@@ -15,7 +15,7 @@ var _strict := false
 func _init() -> void:
 	_dialogue_manager = DialogueManager.new()
 	if ProjectSettings.get("application/config/features").has("C#"):
-		_cs_type_checker = load("res://addons/dialogue_manager_type_check/type_checker/TypeChecker.cs").new()
+		_cs_type_checker = load("res://addons/dialogue_manager_typecheck/type_checker/TypeChecker.cs").new()
 
 func cleanup() -> void:
 	_dialogue_manager.free()

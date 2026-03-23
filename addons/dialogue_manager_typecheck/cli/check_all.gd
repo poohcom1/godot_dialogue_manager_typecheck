@@ -1,6 +1,6 @@
 extends Node
 
-const TypeChecker := preload("res://addons/dialogue_manager_type_check/type_checker/type_checker.gd")
+const TypeChecker := preload("res://addons/dialogue_manager_typecheck/type_checker/type_checker.gd")
 
 func _ready():
 	await get_tree().process_frame

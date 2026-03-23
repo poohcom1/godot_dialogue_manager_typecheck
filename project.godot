@@ -33,7 +33,7 @@ project/assembly_name="Dialogue Manager Typecheck"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dialogue_manager/plugin.cfg", "res://addons/dialogue_manager_type_check/plugin.cfg", "res://addons/gdUnit4/plugin.cfg")
+enabled=PackedStringArray("res://addons/dialogue_manager/plugin.cfg", "res://addons/dialogue_manager_typecheck/plugin.cfg", "res://addons/gdUnit4/plugin.cfg")
 
 [internationalization]
 

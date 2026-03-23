@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://wigci4ekd6rp"]
 
-[ext_resource type="Script" uid="uid://cpv2y3wytopho" path="res://addons/dialogue_manager_type_check/cli/check_all.gd" id="1_wempn"]
+[ext_resource type="Script" uid="uid://cpv2y3wytopho" path="res://addons/dialogue_manager_typecheck/cli/check_all.gd" id="1_wempn"]
 
 [node name="CheckAll" type="Node2D" unique_id=2132243918]
 script = ExtResource("1_wempn")

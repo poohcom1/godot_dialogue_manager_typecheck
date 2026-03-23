@@ -13,7 +13,7 @@ This is a mirror of the addon on my local project--I won't be maintaining it muc
 Version number tracks the base addon's version. If the base addon's version is higher, it may or may not work with that version.
 
 1. Download or clone the repo.
-2. Copy `addons/dialogue_manager_type_check` to your project's addon folder.
+2. Copy `addons/dialogue_manager_typecheck` to your project's addon folder.
 3. Make sure dialogue_manager is already installed and activated.
 4. (If using C#) Run `dotnet build`.
 5. Activate "Dialogue Manager Type Checker" in the plugins.
@@ -31,7 +31,7 @@ Adds highlighting in the dialogue editor. Click on the warning icon in the gutte
 Run the following command to verify all dialogue files in a project:
 
 ```sh
-godot --headless -d addons/dialogue_manager_type_check/cli/check_all.tscn
+godot --headless -d addons/dialogue_manager_typecheck/cli/check_all.tscn
 ```
 
 The commands return a non-zero exit code if errors are found, so you can easily plug this into your CI.
