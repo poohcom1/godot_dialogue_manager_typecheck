@@ -22,7 +22,7 @@ func cleanup() -> void:
 
 # API
 func check_type(dialogue: DialogueResource) -> Dictionary[int, TypeError]:
-	var global_scripts: Array[ClassType] = []
+	var global_scripts: Array[DataType] = []
 	# TODO: Also include extra_script_source
 	var autoload_shortcuts: PackedStringArray = DMSettings.get_setting(DMSettings.STATE_AUTOLOAD_SHORTCUTS, [])
 	for autoload in autoload_shortcuts + dialogue.using_states:
@@ -145,12 +145,13 @@ static func _parse_expression_list(tokens: Array) -> Array[ASTNode]:
 var STATIC_REGEX: RegEx = RegEx.create_from_string("^static var (?<property>[a-zA-Z_0-9]+)(:\\s?(?<type>[a-zA-Z_0-9]+))?")
 
 ## Verifies the type correctness of an expression.
-## [ClassType] is a basic wrapper over a Script/built-in class
-func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: Array[ClassType], base: ASTNode, is_static := false) -> TypeError:
-	var base_classes := global_classes
-	if parent_class != null:
+## [DataType] is a basic wrapper over a Script/built-in types,
+## [param global_types] is for the global scope, as it can include multiple autoloads, and needs to be passed down the tree as certain AST branches can reset context
+func _verify_expression(node: ASTNode, parent_type: DataType, global_types: Array[DataType], base: ASTNode, is_static := false) -> TypeError:
+	var base_classes := global_types
+	if parent_type != null:
 		base_classes = []
-		base_classes.assign([parent_class])
+		base_classes.assign([parent_type])
 	
 	if node is ASTOp:
 		return TypeError.ok(null)
@@ -159,7 +160,7 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 	elif node is ASTFunc:
 		var found_method: Dictionary = {}
 		for class_type in base_classes:
-			if parent_class == null:
+			if parent_type == null:
 				for method_info in BUILT_IN_TYPES:
 					if method_info.name == node.identifier:
 						found_method = method_info
@@ -191,7 +192,7 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 			# Check args
 			for i in range(len(node.args)):
 				var arg_node := (node as ASTFunc).args[i]
-				var err := _verify_expression(arg_node, null, global_classes, arg_node) # reset context as it's not chained
+				var err := _verify_expression(arg_node, null, global_types, arg_node) # reset context as it's not chained
 				if not err.is_ok():
 					return err
 				
@@ -199,24 +200,24 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 					assert(vararg_method, "Arg exceeds method arg count, but method is not a vararg.")
 					continue
 				
-				var expected_arg: ClassType = _get_classtype_from_property_info(found_method.args[i])
-				var actual_arg: ClassType = err.expr_ret
-				if not ClassType.can_assign(actual_arg, expected_arg):
+				var expected_arg: DataType = _get_classtype_from_property_info(found_method.args[i])
+				var actual_arg: DataType = err.expr_ret
+				if not DataType.can_assign(actual_arg, expected_arg):
 					return ArgMismatch.new(i + 1, expected_arg, actual_arg, node, base)
 
 			return TypeError.ok(_get_classtype_from_property_info(found_method.get("return", {})))
 
-		return UnknownMethod.new(node, base, parent_class)
+		return UnknownMethod.new(node, base, parent_type)
 	# Must be member then
 	else:
-		var member_class: ClassType = null
+		var member_type: DataType = null
 		var member_static := false
 
 		# Top level, look for autoloads
-		if base == node and member_class == null:
+		if base == node and member_type == null:
 			var autoload_script := _get_autoload_script(node.identifier)
 			if autoload_script != null:
-				member_class = ScriptType.new(autoload_script, node.identifier)
+				member_type = ScriptType.new(autoload_script, node.identifier)
 		for class_type in base_classes:
 			# Check static context first; constants and enums
 			var constant_map := class_type.get_class_constant_map()
@@ -224,11 +225,11 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 			if constant_val != null:
 				# Class
 				if constant_val is Script:
-					member_class = ScriptType.new(constant_val)
+					member_type = ScriptType.new(constant_val)
 					member_static = true
 					if node.next == null:
 						# Weird subclass expression (MyClass.SubClass), but technically valid
-						return TypeError.ok(member_class)
+						return TypeError.ok(member_type)
 					break
 				# Enum
 				if constant_val is Dictionary:
@@ -256,7 +257,7 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 						return TypeError.ok(_get_classtype_from_property_info(property_info))
 					else:
 						# Not tail, attempt to find script
-						member_class = _get_classtype_from_property_info(property_info)
+						member_type = _get_classtype_from_property_info(property_info)
 			# Still not found, might be static var
 			if class_type is ScriptType and (class_type.class_script as Script).source_code.contains("static var"):
 				for line: String in class_type.class_script.source_code.split("\n"):
@@ -269,13 +270,13 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 						else:
 							if matched.names.has("type"):
 								# TODO: This only supports object types, need to find a way to detect if built-in type based on type string
-								member_class = _get_classtype_from_property_info({ &"type": TYPE_OBJECT, &"class_name": matched.strings[matched.names.type] })
-		if member_class == null:
-			return UnknownProperty.new(node, base, parent_class, is_static)
+								member_type = _get_classtype_from_property_info({ &"type": TYPE_OBJECT, &"class_name": matched.strings[matched.names.type] })
+		if member_type == null:
+			return UnknownProperty.new(node, base, parent_type, is_static)
 		if node.next != null:
-			return _verify_expression(node.next, member_class, global_classes, base, member_static)
-		return UnknownProperty.new(node, base, member_class, is_static)
-	return UnknownProperty.new(node, base, parent_class, is_static)
+			return _verify_expression(node.next, member_type, global_types, base, member_static)
+		return UnknownProperty.new(node, base, member_type, is_static)
+	return UnknownProperty.new(node, base, parent_type, is_static)
 
 static func _get_autoload_script(autoload: StringName) -> Script:
 	var setting = ProjectSettings.get("autoload/%s" % autoload)
@@ -294,7 +295,7 @@ static func _get_autoload_script(autoload: StringName) -> Script:
 		# Script or null
 		return autoload_res
 
-static func _get_classtype_from_property_info(property_info: Dictionary) -> ClassType:
+static func _get_classtype_from_property_info(property_info: Dictionary) -> DataType:
 	if property_info.is_empty():
 		return VariantType.new()
 	if property_info["type"] == TYPE_OBJECT and property_info.has("class_name"):
@@ -377,13 +378,13 @@ enum TypeErrorType {
 class TypeError:
 	var type: TypeErrorType
 	var msg: String = ""
-	var expr_ret: ClassType
+	var expr_ret: DataType
 
 	func _init(p_type: TypeErrorType, p_msg = "") -> void:
 		type = p_type
 		msg = p_msg
 
-	static func ok(ret_type: ClassType) -> TypeError:
+	static func ok(ret_type: DataType) -> TypeError:
 		var err := TypeError.new(TypeErrorType.Ok)
 		err.expr_ret = ret_type
 		return err
@@ -397,7 +398,7 @@ class TypeError:
 		return msg
 
 class UnknownProperty extends TypeError:
-	func _init(node: ASTNode, base: ASTNode, type: ClassType, is_static: bool) -> void:
+	func _init(node: ASTNode, base: ASTNode, type: DataType, is_static: bool) -> void:
 		var path := str(base.get_path_to(node))
 		var type_class_name := str(type.get_class_name()) if type != null else ""
 		var base_context = '"%s"' % path
@@ -408,7 +409,7 @@ class UnknownProperty extends TypeError:
 		super._init(TypeErrorType.UnknownMember, 'Could not find %s "%s" in %s.' % ["property" if not is_static else "static variable or constant", node.identifier, base_context])
 
 class UnknownMethod extends TypeError:
-	func _init(node: ASTNode, base: ASTNode, type: ClassType) -> void:
+	func _init(node: ASTNode, base: ASTNode, type: DataType) -> void:
 		var path := str(base.get_path_to(node))
 		var type_class_name := str(type.get_class_name()) if type != null else ""
 		var base_context = '"%s"' % path
@@ -435,7 +436,7 @@ class ArgsCount extends TypeError:
 		super._init(TypeErrorType.ArgsCount, 'Expected %d arguments, got %d in "%s()".' % [expected, actual, base.get_path_to(node)])
 
 class ArgMismatch extends TypeError:
-	func _init(ind: int, expected: ClassType, actual: ClassType, node: ASTNode, base: ASTNode) -> void:
+	func _init(ind: int, expected: DataType, actual: DataType, node: ASTNode, base: ASTNode) -> void:
 		super._init(TypeErrorType.ArgMismatch, 'Expected argument %d to be of type %s, got %s in "%s()".' % [ind, expected.get_class_name(), actual.get_class_name(), base.get_path_to(node)])
 
 #endregion
@@ -443,14 +444,14 @@ class ArgMismatch extends TypeError:
 #region Class / Constants
 
 ## Helper wrapper for Script / built-in class
-@abstract class ClassType:
+@abstract class DataType:
 	# API
 	@abstract func get_class_name() -> String
 	@abstract func get_class_property_list() -> Array[Dictionary]
 	@abstract func get_class_method_list() -> Array[Dictionary]
 	@abstract func get_class_constant_map() -> Dictionary
 
-	static func can_assign(current: ClassType, target: ClassType) -> bool:
+	static func can_assign(current: DataType, target: DataType) -> bool:
 		if current is VariantType or target is VariantType:
 			return true
 		if current is BuiltinType and target is BuiltinType:
@@ -469,7 +470,7 @@ class ArgMismatch extends TypeError:
 			return can_assign(EngineType.new(current.get_instance_base_type), target)
 		
 		return false
-class BuiltinType extends ClassType:
+class BuiltinType extends DataType:
 	var variant_type: int
 	func _init(p_variant_type: int) -> void: variant_type = p_variant_type
 	func _to_string(): return "BuiltinType(%s)" % variant_type
@@ -482,7 +483,7 @@ class VariantType extends BuiltinType:
 	func _init(): super._init(0)
 	func _to_string(): return "VariantType()"
 
-class EngineType extends ClassType:
+class EngineType extends DataType:
 	var engine_type: StringName
 	func _init(p_engine_type: StringName) -> void:
 		engine_type = p_engine_type
@@ -497,7 +498,7 @@ class EngineType extends ClassType:
 	func get_class_constant_map() -> Dictionary:
 		return {}
 
-class ScriptType extends ClassType:
+class ScriptType extends DataType:
 	var class_script: Script
 	## Used in case of a non-global autoload class
 	var _autoload_name: String = ""
