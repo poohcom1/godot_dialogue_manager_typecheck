@@ -3,7 +3,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net9.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
-    <RootNamespace>DialoogueManagerTypecheck</RootNamespace>
+    <RootNamespace>DialogueManagerTypecheck</RootNamespace>
   </PropertyGroup>
   <!-- gdUnit4 package dependencies --> 
   <ItemGroup>

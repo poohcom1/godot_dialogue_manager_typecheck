@@ -29,7 +29,7 @@ runtime/advanced/uses_dotnet=true
 
 [dotnet]
 
-project/assembly_name="Dialoogue Manager Typecheck"
+project/assembly_name="Dialogue Manager Typecheck"
 
 [editor_plugins]
 

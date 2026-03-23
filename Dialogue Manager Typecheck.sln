@@ -1,6 +1,6 @@
 ﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dialoogue Manager Typecheck", "Dialoogue Manager Typecheck.csproj", "{2C75267F-90E0-4D93-A773-77D86AC06998}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dialogue Manager Typecheck", "Dialogue Manager Typecheck.csproj", "{2C75267F-90E0-4D93-A773-77D86AC06998}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
