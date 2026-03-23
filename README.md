@@ -1,6 +1,6 @@
 # <img src="https://raw.githubusercontent.com/nathanhoad/godot_dialogue_manager/refs/heads/main/docs/media/logo.svg" height="24px"> Dialogue Manager _- Type Checker_
 
-<img alt="Dynamic TOML Badge" src="https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpoohcom1%2Fgodot_dialogue_manager_typecheck%2Frefs%2Fheads%2Fmaster%2Faddons%2Fdialogue_manager_type_check%2Fplugin.cfg&query=plugin.version&prefix=v&label=Dialogue%20Manager">
+<img alt="Dynamic TOML Badge" src="https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpoohcom1%2Fgodot_dialogue_manager_typecheck%2Frefs%2Fheads%2Fmaster%2Faddons%2Fdialogue_manager_typecheck%2Fplugin.cfg&query=plugin.version&prefix=v&label=Dialogue%20Manager">
 
 An addon to for addon--a type checker module for Nathan Hoad's [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager).
 
