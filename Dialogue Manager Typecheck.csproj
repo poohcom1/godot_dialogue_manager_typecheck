@@ -5,4 +5,7 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>DialogueManagerTypecheck</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="gdUnit4.api" Version="5.0.0"/>
+  </ItemGroup>
 </Project>
