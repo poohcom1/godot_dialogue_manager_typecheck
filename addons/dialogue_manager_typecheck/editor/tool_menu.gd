@@ -30,7 +30,7 @@ func on_enter_tree() -> void:
 
 	await EditorInterface.get_base_control().get_tree().process_frame
 
-	_dialogue_tool_menu = EditorUtil.find_dialogue_tool_menu()
+	_dialogue_tool_menu = find_dialogue_tool_menu()
 	assert(_dialogue_tool_menu != null, "Could not find Dialogue Manager tool menu.")
 	
 	_dialogue_tool_menu.add_icon_item(load("res://addons/dialogue_manager/assets/region.svg"), "Check Type", ID_CHECK_TYPE)
@@ -43,6 +43,28 @@ func on_exit_tree() -> void:
 	if _dialogue_tool_menu != null and  _dialogue_tool_menu.is_inside_tree():
 		_dialogue_tool_menu.id_pressed.disconnect(_on_tool_pressed)
 		_dialogue_tool_menu.remove_item(_dialogue_tool_menu.get_item_index(ID_CHECK_TYPE))
+
+
+static func find_dialogue_tool_menu() -> PopupMenu:
+	var base = EditorInterface.get_base_control()
+	
+	var menu_bar = EditorUtil.search_child(base, func(node: Node):
+		return node is MenuBar and node.has_node("Project")
+	)
+	var project_menu: PopupMenu = menu_bar.get_node("Project")
+	
+	var tool_menu: PopupMenu
+	for i in range(project_menu.item_count):
+		if project_menu.get_item_text(i) == "Tools":
+			tool_menu = project_menu.get_item_submenu_node(i)
+			break
+	
+	var dialogue_manager_menu: PopupMenu
+	for i in range(tool_menu.item_count):
+		if tool_menu.get_item_text(i) == "Dialogue":
+			dialogue_manager_menu = tool_menu.get_item_submenu_node(i)
+			break
+	return dialogue_manager_menu
 
 # Callbacks
 func _on_tool_pressed(id: int) -> void:
