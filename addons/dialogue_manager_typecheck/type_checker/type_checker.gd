@@ -83,14 +83,15 @@ static func _parse_expression_list(tokens: Array) -> Array[ASTNode]:
 				# Not sure why bool tokens are compiled as var, but whatever
 				if token[&"value"] in ["true", "false"]:
 					new_node = ASTLiteral.new(TYPE_BOOL)
-					new_node.identifier = token[&"value"]
 				else:
 					new_node = ASTIdentifier.new()
-					new_node.identifier = token[&"value"]
+				new_node.identifier = token[&"value"]
+				new_node.column_number = token[&"i"]
 				
 			DMConstants.TOKEN_FUNCTION:
 				var func_node = ASTFunc.new()
 				func_node.identifier = token[&"function"]
+				func_node.column_number = token[&"i"]
 				# Recursive Step: DM stores function args as nested arrays/tokens
 				if token.has(&"value"):
 					for arg_tokens in token[&"value"]:
@@ -100,11 +101,14 @@ static func _parse_expression_list(tokens: Array) -> Array[ASTNode]:
 			DMConstants.TOKEN_STRING:
 				new_node = ASTLiteral.new(TYPE_STRING)
 				new_node.identifier = str(token[&"value"])
+				new_node.column_number = token[&"i"]
 			DMConstants.TOKEN_NUMBER:
 				new_node = ASTLiteral.new(TYPE_FLOAT if str(token[&"value"]).contains(".") else TYPE_INT)
 				new_node.identifier = str(token[&"value"])
+				new_node.column_number = token[&"i"]
 			DMConstants.TOKEN_BOOL:
 				new_node = ASTLiteral.new(TYPE_BOOL)
+				new_node.column_number = token[&"i"]
 				new_node.identifier = str(token[&"value"])
 			
 			DMConstants.TOKEN_OPERATOR, DMConstants.TOKEN_ASSIGNMENT, DMConstants.TOKEN_COMPARISON:
@@ -124,6 +128,7 @@ static func _parse_expression_list(tokens: Array) -> Array[ASTNode]:
 			DMConstants.TOKEN_DICTIONARY_REFERENCE:
 				var var_node := ASTIdentifier.new()
 				var_node.identifier = token[&"variable"]
+				var_node.column_number = token[&"i"]
 
 				var indexer_node := ASTSubscript.new()
 				if token.has(&"value"):
@@ -340,6 +345,7 @@ static func _get_classtype_from_property_info(property_info: Dictionary) -> Data
 ## Node to represent the AST
 @abstract class ASTNode:
 	var next: ASTNode
+	var column_number: int = 0
 
 	func get_path_to(target_node: ASTNode) -> String:
 		var display := to_path()
@@ -420,7 +426,10 @@ enum TypeErrorType {
 
 class TypeError:
 	var type: TypeErrorType
+
 	var msg: String = ""
+
+	var column_number := 0
 	var expr_ret: DataType
 
 	func _init(p_type: TypeErrorType, p_msg = "") -> void:
@@ -449,6 +458,7 @@ class UnknownProperty extends TypeError:
 			base_context += " (%s)" % type_class_name
 		if base == node:
 			base_context = "usings or state autoload shortcuts"
+		column_number = base.column_number
 		super._init(TypeErrorType.UnknownMember, 'Could not find %s "%s" in %s.' % ["property" if not is_static else "static variable or constant", node.identifier, base_context])
 
 class UnknownMethod extends TypeError:
@@ -460,30 +470,37 @@ class UnknownMethod extends TypeError:
 			base_context += " (%s)" % type_class_name
 		if base == node:
 			base_context = "usings or state autoload shortcuts"
+		column_number = base.column_number
 		super._init(TypeErrorType.UnknownMethod, 'Could not find "%s()" in %s.' % [node.identifier, base_context])
 
 class UnknownEnum extends TypeError:
 	func _init(node: ASTNode, base: ASTNode) -> void:
+		column_number = base.column_number
 		super._init(TypeErrorType.UnknownEnum, 'Could not find enum "%s" in "%s".' % [node.identifier, base.get_path_to(node)])
 
 class StaticInstanceAccess extends TypeError:
 	func _init(node: ASTNode, base: ASTNode) -> void:
+		column_number = base.column_number
 		super._init(TypeErrorType.StaticMemberAccess, 'Cannot access instance member "%s" from "%s" in a static context.' % [node.identifier, base.get_path_to(node)])
 
 class StaticFuncAccess extends TypeError:
 	func _init(node: ASTNode, base: ASTNode) -> void:
+		column_number = base.column_number
 		super._init(TypeErrorType.StaticFuncAccess, 'Cannot access non-static function "%s"() from "%s" in a static context.' % [node.identifier, base.get_path_to(node)])
 
 class ArgsCount extends TypeError:
 	func _init(expected: int, actual: int, node: ASTNode, base: ASTNode) -> void:
+		column_number = base.column_number
 		super._init(TypeErrorType.ArgsCount, 'Expected %d arguments, got %d in "%s()".' % [expected, actual, base.get_path_to(node)])
 
 class ArgMismatch extends TypeError:
 	func _init(ind: int, expected: DataType, actual: DataType, node: ASTNode, base: ASTNode) -> void:
+		column_number = base.column_number
 		super._init(TypeErrorType.ArgMismatch, 'Expected argument %d to be of type %s, got %s in "%s()".' % [ind, expected.get_class_name(), actual.get_class_name(), base.get_path_to(node)])
 
 class SubscriptInvalidIndex extends TypeError:
 	func _init(expected: DataType, container_type: DataType, node: ASTNode, base: ASTNode) -> void:
+		column_number = base.column_number
 		super._init(TypeErrorType.SubcriptInvalidIndex, "Cannot index %s (%s) with %s." % [base.get_path_to(node), container_type.get_class_name(), expected.get_class_name()])
 
 #endregion

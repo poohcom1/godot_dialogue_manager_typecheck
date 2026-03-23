@@ -18,7 +18,7 @@ func show_error() -> void:
 		count_label.text = DMConstants.translate(&"n_of_n").format({ index = error_index + 1, total = errors.size() })
 		var error: DMError = errors[error_index]
 		if error is DMWarning:
-			error_button.text = "Type error at {line}: {message}".format({ line = error.line_number, column = error.column_number, message = error.warning.msg })
+			error_button.text = "Type error at {line}, {column}: {message}".format({ line = error.line_number, column = error.warning.column_number, message = error.warning.msg })
 			apply_warning_theme()
 		else:
 			error_button.text = DMConstants.translate(&"errors.line_and_message").format({ line = error.line_number, column = error.column_number, message = DMConstants.get_error_message(error.error) })
