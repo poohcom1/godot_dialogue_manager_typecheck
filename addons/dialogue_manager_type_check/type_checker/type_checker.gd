@@ -256,10 +256,7 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 						return TypeError.ok(_get_classtype_from_property_info(property_info))
 					else:
 						# Not tail, attempt to find script
-						if property_info.has("class_name"):
-							member_class = _get_classtype_for_class_name(property_info["class_name"])
-						if member_class:
-							break
+						member_class = _get_classtype_from_property_info(property_info)
 			# Still not found, might be static var
 			if class_type is ScriptType and (class_type.class_script as Script).source_code.contains("static var"):
 				for line: String in class_type.class_script.source_code.split("\n"):
@@ -271,8 +268,8 @@ func _verify_expression(node: ASTNode, parent_class: ClassType, global_classes: 
 						# Not tail, check if type avail
 						else:
 							if matched.names.has("type"):
-								var type: String = matched.strings[matched.names.type]
-								member_class = _get_classtype_for_class_name(type)
+								# TODO: This only supports object types, need to find a way to detect if built-in type based on type string
+								member_class = _get_classtype_from_property_info({ &"type": TYPE_OBJECT, &"class_name": matched.strings[matched.names.type] })
 		if member_class == null:
 			return UnknownProperty.new(node, base, parent_class, is_static)
 		if node.next != null:
@@ -297,23 +294,18 @@ static func _get_autoload_script(autoload: StringName) -> Script:
 		# Script or null
 		return autoload_res
 
-static func _get_classtype_for_class_name(class_name_to_find: String) -> ClassType:
-	if class_name_to_find == "": return VariantType.new()
-
-	for class_data: Dictionary in ProjectSettings.get_global_class_list():
-		if class_data.get(&"class") == class_name_to_find:
-			return ScriptType.new(load(class_data.path))
-	
-	if ClassDB.class_exists(class_name_to_find):
-		return EngineType.new(class_name_to_find)
-
-	return VariantType.new()
-
 static func _get_classtype_from_property_info(property_info: Dictionary) -> ClassType:
 	if property_info.is_empty():
 		return VariantType.new()
 	if property_info["type"] == TYPE_OBJECT and property_info.has("class_name"):
-		return _get_classtype_for_class_name(property_info["class_name"])
+		var class_name_to_find: String = property_info["class_name"]
+		if class_name_to_find == "": return VariantType.new()
+		for class_data: Dictionary in ProjectSettings.get_global_class_list():
+			if class_data.get(&"class") == class_name_to_find:
+				return ScriptType.new(load(class_data.path))
+		if ClassDB.class_exists(class_name_to_find):
+			return EngineType.new(class_name_to_find)
+		return VariantType.new()
 	elif property_info["type"] != TYPE_NIL:
 		return BuiltinType.new(property_info["type"])
 	return VariantType.new()
