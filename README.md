@@ -52,10 +52,11 @@ Adds highlighting in the dialogue editor. Click on the warning icon in the gutte
 
 The current analyzer should cover most basic use-cases that is valid expressions for Dialogue Manager, but there are a few exceptions and limitations. Some of them are just not implemented yet and may either be ignored or a false positive. Others are limitation due to GDScript's reflection API.
 
-| Syntax           | Example                                 | Comment                                                                                                                                         |
-| ---------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Chained function | `get_tree().quit()`                     | Not implemented.                                                                                                                                |
-| Assignments      | `GameManager.string_val == 23`          | Not implemented.                                                                                                                                |
-| Built-in types   | `GameManager.string_val.to_lowered()`   | GDScript does not expose function API for built-in types. Could be manually coded, but likely not worth the overhead.                           |
-| Static member    | `GameManager.static_node.queue_freed()` | GDScript does not expose API to query static members. Partially implemented with regex search, but cannot consistently obtain member type info. |
-| C# functions     |                                         | Type-checking is implemented, but may choke on non-variant types.                                                                               |
+| Syntax                  | Example                                 | Comment                                                                                                                                         |
+| ----------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Array/Dictionary access | `GameManager.npcs[0]`                   | Not implemented                                                                                                                                 |
+| Chained function        | `get_tree().quit()`                     | Not implemented.                                                                                                                                |
+| Assignments             | `GameManager.string_val == 23`          | Not implemented.                                                                                                                                |
+| Built-in types          | `GameManager.string_val.to_lowered()`   | GDScript does not expose function API for built-in types. Could be manually coded, but likely not worth the overhead.                           |
+| Static member           | `GameManager.static_node.queue_freed()` | GDScript does not expose API to query static members. Partially implemented with regex search, but cannot consistently obtain member type info. |
+| C# functions            |                                         | Type-checking is implemented, but may choke on non-variant types.                                                                               |
