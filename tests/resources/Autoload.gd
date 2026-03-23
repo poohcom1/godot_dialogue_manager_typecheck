@@ -14,6 +14,9 @@ class SubClass:
 var subclass_instance := SubClass.new()
 var node2d := TestNode2D.new()
 
+var string_var: String = "test"
+var arr_var: Array = [1, 2, 3, 4]
+
 class TestNode2D extends Node2D:
 	var num: int
 

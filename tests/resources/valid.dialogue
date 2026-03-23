@@ -11,6 +11,8 @@ do debug(true)
 do debug(Vector2(0, 0))
 do debug(Vector2(0, 0), true, "hello")
 do debug()
+# Dictionary / Array
+do Autoload.arr_var[1]
 # Base
 do test_global()
 do test_using()

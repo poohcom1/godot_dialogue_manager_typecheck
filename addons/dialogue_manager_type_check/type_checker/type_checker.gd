@@ -91,7 +91,7 @@ static func _parse_expression_list(tokens: Array) -> Array[ASTNode]:
 					new_node = ASTLiteral.new(TYPE_BOOL)
 					new_node.identifier = token[&"value"]
 				else:
-					new_node = ASTNode.new()
+					new_node = ASTIdentifier.new()
 					new_node.identifier = token[&"value"]
 				
 			DMConstants.TOKEN_FUNCTION:
@@ -126,6 +126,17 @@ static func _parse_expression_list(tokens: Array) -> Array[ASTNode]:
 			DMConstants.TOKEN_DOT:
 				i += 1
 				continue # Dots are structural, we just wait for the next variable/function
+			
+			DMConstants.TOKEN_DICTIONARY_REFERENCE:
+				var var_node := ASTIdentifier.new()
+				var_node.identifier = token[&"variable"]
+
+				var indexer_node := ASTSubscript.new()
+				if token.has(&"value"):
+					indexer_node.indexer = _parse_expression_list(token[&"value"])[0]
+				
+				var_node.next = indexer_node
+				new_node = var_node
 
 		if new_node:
 			if current_base == null:
@@ -157,6 +168,9 @@ func _verify_expression(node: ASTNode, parent_type: DataType, global_types: Arra
 		return TypeError.ok(null)
 	elif node is ASTLiteral:
 		return TypeError.ok(BuiltinType.new(node.literal_type))
+	elif node is ASTSubscript:
+		# TODO: Allow int for array access, string/stringname for object and dict access
+		return TypeError.ok(null)
 	elif node is ASTFunc:
 		var found_method: Dictionary = {}
 		for class_type in base_classes:
@@ -317,9 +331,9 @@ static func _get_classtype_from_property_info(property_info: Dictionary) -> Data
 #region AST Classes
 
 ## Node to represent the AST
-class ASTNode:
+@abstract class ASTNode:
 	func get_path_to(target_node: ASTNode) -> String:
-		var display = identifier
+		var display := to_path()
 		var node := next
 
 		const MAX := 99
@@ -335,29 +349,49 @@ class ASTNode:
 				break
 		return display
 
+	@abstract func to_path() -> String
+
 	func _to_string() -> String:
-		var display = "Node(%s)" % identifier
+		var display = "Node<%s>" % str(self)
 		if next != null:
 			display += " -> " + str(next)
 		return display
 
-	var identifier: String
 	var next: ASTNode
 
-class ASTFunc extends ASTNode:
+class ASTIdentifier extends ASTNode:
+	var identifier: String
+
+	func to_path():
+		return identifier
+
+	func _to_string() -> String:
+		return "Identifier<%s>" % identifier
+
+class ASTFunc extends ASTIdentifier:
 	var args: Array[ASTNode] = []
 
 	func _to_string() -> String:
-		return "Func(%s)" % identifier
+		return "Func<%s(%s)>" % [identifier, args]
 
-class ASTLiteral extends ASTNode:
+## Represents the 
+class ASTSubscript extends ASTNode:
+	var indexer: ASTNode
+
+	func to_path() -> String:
+		return "[]" % indexer
+
+	func _to_string() -> String:
+		return "Indexer<[%s]>" % indexer
+
+class ASTLiteral extends ASTIdentifier:
 	var literal_type: int
 	func _init(literal_type: int) -> void:
 		self.literal_type = literal_type
 	func _to_string() -> String:
-		return "Literal(%s)" % identifier
+		return "Literal<%s>" % identifier
 
-class ASTOp extends ASTNode:
+class ASTOp extends ASTIdentifier:
 	var token_type: StringName
 
 #endregion
