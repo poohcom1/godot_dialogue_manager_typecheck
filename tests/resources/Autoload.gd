@@ -14,8 +14,14 @@ class SubClass:
 var subclass_instance := SubClass.new()
 var node2d := TestNode2D.new()
 
-var string_var: String = "test"
+var int_var: int = 1
+var str_var: String = "hello"
 var arr_var: Array = [1, 2, 3, 4]
+var dict_var: Dictionary = { 
+	"hello": 12,
+	1: "hello"
+}
+var obj_var: RefCounted = RefCounted.new()
 
 class TestNode2D extends Node2D:
 	var num: int
@@ -24,4 +30,4 @@ func _ready() -> void:
 	print(node2d.name)
 
 func test_autoload():
-	pass
+	print(dict_var[int_var])

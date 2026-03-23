@@ -169,7 +169,20 @@ func _verify_expression(node: ASTNode, parent_type: DataType, global_types: Arra
 	elif node is ASTLiteral:
 		return TypeError.ok(BuiltinType.new(node.literal_type))
 	elif node is ASTSubscript:
-		# TODO: Allow int for array access, string/stringname for object and dict access
+		assert(parent_type != null, "Top-level subscript. Shouldn't get here, this should've been caught by the parser")
+		assert((node as ASTSubscript).indexer != null, "Empty subscript. Shouldn't get here, this should've been caught by the parser")
+
+		# Verify subscript
+		var indexer_err := _verify_expression(node.indexer, null, global_types, node.indexer, is_static)
+		if not indexer_err.is_ok():
+			return indexer_err
+		
+		var indexer_type := indexer_err.expr_ret
+		
+		if parent_type is BuiltinType and parent_type.variant_type == TYPE_ARRAY and not (indexer_type is BuiltinType and indexer_type.variant_type == TYPE_INT):
+			return SubscriptInvalidIndex.new(indexer_err.expr_ret, parent_type, node, base)
+		if (parent_type is EngineType or parent_type is ScriptType) and not (indexer_type is BuiltinType and indexer_type.variant_type in [TYPE_STRING, TYPE_STRING_NAME]):
+			return SubscriptInvalidIndex.new(indexer_err.expr_ret, parent_type, node, base)
 		return TypeError.ok(null)
 	elif node is ASTFunc:
 		var found_method: Dictionary = {}
@@ -332,6 +345,8 @@ static func _get_classtype_from_property_info(property_info: Dictionary) -> Data
 
 ## Node to represent the AST
 @abstract class ASTNode:
+	var next: ASTNode
+
 	func get_path_to(target_node: ASTNode) -> String:
 		var display := to_path()
 		var node := next
@@ -341,7 +356,10 @@ static func _get_classtype_from_property_info(property_info: Dictionary) -> Data
 		while node != null:
 			if node == target_node:
 				return display
-			display += "." + node.identifier
+			if node is ASTSubscript:
+				display += node.to_path()
+			else:
+				display += "." + node.to_path()
 			node = node.next
 			i += 1
 			if i > MAX:
@@ -352,21 +370,17 @@ static func _get_classtype_from_property_info(property_info: Dictionary) -> Data
 	@abstract func to_path() -> String
 
 	func _to_string() -> String:
-		var display = "Node<%s>" % str(self)
+		var display = to_path()
 		if next != null:
 			display += " -> " + str(next)
 		return display
 
-	var next: ASTNode
 
 class ASTIdentifier extends ASTNode:
 	var identifier: String
 
 	func to_path():
 		return identifier
-
-	func _to_string() -> String:
-		return "Identifier<%s>" % identifier
 
 class ASTFunc extends ASTIdentifier:
 	var args: Array[ASTNode] = []
@@ -379,7 +393,7 @@ class ASTSubscript extends ASTNode:
 	var indexer: ASTNode
 
 	func to_path() -> String:
-		return "[]" % indexer
+		return "[]"
 
 	func _to_string() -> String:
 		return "Indexer<[%s]>" % indexer
@@ -406,7 +420,8 @@ enum TypeErrorType {
 	StaticMemberAccess = 4,
 	StaticFuncAccess = 5,
 	ArgsCount = 6,
-	ArgMismatch = 7
+	ArgMismatch = 7,
+	SubcriptInvalidIndex = 8
 }
 
 class TypeError:
@@ -472,6 +487,10 @@ class ArgsCount extends TypeError:
 class ArgMismatch extends TypeError:
 	func _init(ind: int, expected: DataType, actual: DataType, node: ASTNode, base: ASTNode) -> void:
 		super._init(TypeErrorType.ArgMismatch, 'Expected argument %d to be of type %s, got %s in "%s()".' % [ind, expected.get_class_name(), actual.get_class_name(), base.get_path_to(node)])
+
+class SubscriptInvalidIndex extends TypeError:
+	func _init(expected: DataType, container_type: DataType, node: ASTNode, base: ASTNode) -> void:
+		super._init(TypeErrorType.SubcriptInvalidIndex, "Cannot index %s (%s) with %s." % [base.get_path_to(node), container_type.get_class_name(), expected.get_class_name()])
 
 #endregion
 

@@ -41,3 +41,7 @@ func test_invalid():
 	assert_str(results[16].msg).is_equal('Expected argument 3 to be of type Vector2, got int in "test_args_typed()".')
 	
 	assert_int(results[17].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)
+	assert_int(results[19].type).is_equal(TypeChecker.TypeErrorType.SubcriptInvalidIndex)
+	assert_int(results[20].type).is_equal(TypeChecker.TypeErrorType.SubcriptInvalidIndex)
+	
+	

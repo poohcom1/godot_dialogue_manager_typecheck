@@ -12,7 +12,11 @@ do debug(Vector2(0, 0))
 do debug(Vector2(0, 0), true, "hello")
 do debug()
 # Dictionary / Array
-do Autoload.arr_var[1]
+do debug(Autoload.arr_var[1])
+do debug(Autoload.arr_var[Autoload.int_var])
+# do debug(Autoload.dict_var["Hello"]) # DM runtime error
+do debug(Autoload.dict_var[12])
+do debug(Autoload.node2d["global_position"])
 # Base
 do test_global()
 do test_using()
@@ -38,13 +42,16 @@ do Autoload.node2d.global_position
 # C#
 do CSharpAutoload.Function()
 
-# Ignore comment
-
-# @type_ignore
-do unknown_func()
 
 Info: Finished valid dialogue.
 
 do get_tree().quit()
 
+=> END
+
+~ extra
+# @type_ignore
+do unknown_func()
+#@type_ignore
+do unknown_func()
 => END

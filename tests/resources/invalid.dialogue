@@ -15,4 +15,7 @@ do test_args_typed("12", "12", Vector2(0, 0))
 do test_args_typed(12, 12, Vector2(0, 0))
 do test_args_typed(12, "12", 12)
 do CSharpAutoload.UnknownFunction() # C# test
+# Subscript
+do debug(Autoload.arr_var["Hello"])
+do debug(Autoload.node2d[12])
 => END
