@@ -20,15 +20,11 @@ Version number tracks the base addon's version. If the base addon's version is h
 
 ## Features
 
-### Menu Tool
+### Editor
 
-Adds an editor tool at `Project > Tools > Dialogue > Check Type` to analyze the type correctness of a dialogue file.
+Adds highlighting in the dialogue editor. Click on the warning icon in the gutter to see more detail on the type error.
 
-![Example usage as tools](.github/assets/tool%20example.png)
-
-Type errors are printed in the output:
-
-![Output example](.github/assets/error%20output.png)
+![Code edit example](.github/assets/code%20edit%20addon.png)
 
 ### CLI
 
@@ -41,12 +37,6 @@ godot --headless -d addons/dialogue_manager_type_check/cli/check_all.tscn
 The commands return a non-zero exit code if errors are found, so you can easily plug this into your CI.
 
 ![CLI example](.github/assets/cli.png)
-
-### Editor
-
-Adds highlighting in the dialogue editor. Click on the warning icon in the gutter to see more detail on the type error.
-
-![Code edit example](.github/assets/code%20edit%20addon.png)
 
 ## Syntax Coverage
 

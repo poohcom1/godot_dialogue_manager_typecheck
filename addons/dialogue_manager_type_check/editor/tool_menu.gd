@@ -1,3 +1,5 @@
+## Adds a tool menu under Tools -> Dialogue -> Check type
+## @deprecated: Deprecated for maintainability; feature is superceded by in-editor highlighting and CLI tool
 extends RefCounted
 
 const ID_CHECK_TYPE := 100
