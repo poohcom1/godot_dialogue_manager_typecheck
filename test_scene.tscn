@@ -5,7 +5,7 @@
 
 [node name="ExampleBalloon" unique_id=476423827 instance=ExtResource("1_uhqqe")]
 dialogue_resource = ExtResource("2_ia1lp")
-start_from_title = "start"
+start_from_cue = "start"
 auto_start = true
 
 [node name="AnimationPlayer" parent="Balloon/MarginContainer/PanelContainer/MarginContainer/HBoxContainer/Control" index="1"]
