@@ -18,6 +18,9 @@ signal started_typing()
 ## Emitted when typing finishes.
 signal finished_typing()
 
+## [Deprecated] No longer emitted.
+signal paused_typing(duration: float)
+
 
 ## The action to press to skip typing.
 @export var skip_action: StringName = &"ui_cancel"
@@ -43,7 +46,7 @@ var _already_mutated_indices: PackedInt32Array = []
 
 
 ## The current line of dialogue.
-var dialogue_line: Variant:
+var dialogue_line:
 	set(value):
 		if value != dialogue_line:
 			dialogue_line = value
@@ -54,9 +57,9 @@ var dialogue_line: Variant:
 ## Whether the label is currently typing itself out.
 var is_typing: bool = false:
 	set(value):
-		var did_just_finish: bool = _is_typing != value and value == false and visible_characters == get_total_character_count()
+		var is_finished: bool = _is_typing != value and value == false and visible_characters == get_total_character_count()
 		_is_typing = value
-		if did_just_finish:
+		if is_finished:
 			finished_typing.emit()
 	get:
 		return _is_typing and not _is_awaiting_mutation
@@ -135,7 +138,7 @@ func _type_next(delta: float, seconds_needed: float) -> void:
 		if _is_awaiting_mutation: return
 
 	# Pause on characters like "."
-	var waiting_seconds: float = seconds_per_pause_step if _should_auto_pause() else 0.0
+	var waiting_seconds: float = seconds_per_pause_step if _should_auto_pause() else 0
 	if _last_wait_index != visible_characters and waiting_seconds > 0:
 		_last_wait_index = visible_characters
 		_waiting_seconds += waiting_seconds
@@ -154,7 +157,7 @@ func _type_next(delta: float, seconds_needed: float) -> void:
 # Get the speed for the current typing position
 func _get_speed(at_index: int) -> float:
 	var speed: float = 1
-	for index: int in dialogue_line.speeds:
+	for index in dialogue_line.speeds:
 		if index > at_index:
 			return speed
 		speed = dialogue_line.speeds[index]
@@ -163,13 +166,13 @@ func _get_speed(at_index: int) -> float:
 
 # Run any inline mutations that haven't been run yet
 func _mutate_remaining_mutations() -> void:
-	for i: int in range(visible_characters, get_total_character_count() + 1):
+	for i in range(visible_characters, get_total_character_count() + 1):
 		_mutate_inline_mutations(i)
 
 
 # Run any mutations at the current typing position
 func _mutate_inline_mutations(index: int) -> void:
-	for inline_mutation: Array in dialogue_line.inline_mutations:
+	for inline_mutation in dialogue_line.inline_mutations:
 		# inline mutations are an array of arrays in the form of [character index, resolvable function]
 		if inline_mutation[0] > index:
 			return
@@ -205,7 +208,7 @@ func _should_auto_pause() -> bool:
 	# Ignore "." if it's used in an abbreviation
 	# Note: does NOT support multi-period abbreviations (ex. p.m.)
 	if "." in pause_at_characters and parsed_text[visible_characters - 1] == ".":
-		for abbreviation: String in skip_pause_at_abbreviations:
+		for abbreviation in skip_pause_at_abbreviations:
 			if visible_characters >= abbreviation.length():
 				var previous_characters: String = parsed_text.substr(visible_characters - abbreviation.length() - 1, abbreviation.length())
 				if previous_characters == abbreviation:

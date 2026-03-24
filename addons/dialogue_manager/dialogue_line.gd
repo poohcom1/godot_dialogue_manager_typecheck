@@ -50,6 +50,9 @@ var tags: PackedStringArray = []
 ## The mutation details if this is a mutation line (where [code]type == TYPE_MUTATION[/code]).
 var mutation: Dictionary = {}
 
+## The conditions to check before including this line in the flow of dialogue. If failed the line will be skipped over.
+var conditions: Dictionary = {}
+
 
 func _init(data: Dictionary = {}) -> void:
 	if data.size() > 0:
@@ -87,7 +90,7 @@ func _to_string() -> String:
 ## Check if a dialogue line has a given tag.
 func has_tag(tag_name: String) -> bool:
 	var wrapped: String = "%s=" % tag_name
-	for t: String in tags:
+	for t in tags:
 		if t.begins_with(wrapped):
 			return true
 	return false
@@ -96,7 +99,7 @@ func has_tag(tag_name: String) -> bool:
 ## Get the value of a tag if the tag is in the form of [code]tag=value[/code]
 func get_tag_value(tag_name: String) -> String:
 	var wrapped: String = "%s=" % tag_name
-	for t: String in tags:
+	for t in tags:
 		if t.begins_with(wrapped):
 			return t.replace(wrapped, "").strip_edges()
 	return ""

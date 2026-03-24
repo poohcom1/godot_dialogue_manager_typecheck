@@ -6,8 +6,9 @@ class_name DMDialogueEditorProperty extends EditorProperty
 const DialoguePropertyEditorControl: PackedScene = preload("./editor_property_control.tscn")
 
 
-var control: Control = DialoguePropertyEditorControl.instantiate()
+var control = DialoguePropertyEditorControl.instantiate()
 var current_value: DialogueResource
+var is_updating: bool = false
 
 
 func _init() -> void:
@@ -28,8 +29,10 @@ func _update_property() -> void:
 
 	if next_value == current_value: return
 
+	is_updating = true
 	current_value = next_value
 	control.resource = current_value
+	is_updating = false
 
 
 #region Signals

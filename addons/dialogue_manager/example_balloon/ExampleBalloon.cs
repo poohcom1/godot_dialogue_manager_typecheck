@@ -1,4 +1,3 @@
-#pragma warning disable
 using Godot;
 using Godot.Collections;
 
@@ -7,7 +6,7 @@ namespace DialogueManagerRuntime
   public partial class ExampleBalloon : CanvasLayer
   {
     [Export] public Resource DialogueResource;
-    [Export] public string StartFromLabel = "";
+    [Export] public string StartFromTitle = "";
     [Export] public bool AutoStart = false;
     [Export] public string NextAction = "ui_accept";
     [Export] public string SkipAction = "ui_cancel";
@@ -163,7 +162,7 @@ namespace DialogueManagerRuntime
     }
 
 
-    public async void Start(Resource dialogueResource = null, string label = "", Array<Variant> extraGameStates = null)
+    public async void Start(Resource dialogueResource = null, string title = "", Array<Variant> extraGameStates = null)
     {
       temporaryGameStates = new Array<Variant> { this } + (extraGameStates ?? new Array<Variant>());
       isWaitingForInput = false;
@@ -172,12 +171,12 @@ namespace DialogueManagerRuntime
       {
         DialogueResource = dialogueResource;
       }
-      if (label != "")
+      if (title != "")
       {
-        StartFromLabel = label;
+        StartFromTitle = title;
       }
 
-      DialogueLine = await DialogueManager.GetNextDialogueLine(DialogueResource, StartFromLabel, temporaryGameStates);
+      DialogueLine = await DialogueManager.GetNextDialogueLine(DialogueResource, StartFromTitle, temporaryGameStates);
       Show();
     }
 
@@ -252,11 +251,14 @@ namespace DialogueManagerRuntime
     #region signals
 
 
-    private void OnMutated(Dictionary _mutation)
+    private void OnMutated(Dictionary mutation)
     {
-      isWaitingForInput = false;
-      willHideBalloon = true;
-      MutationCooldown.Start(0.1f);
+      if (!(bool)mutation["is_inline"])
+      {
+        isWaitingForInput = false;
+        willHideBalloon = true;
+        MutationCooldown.Start(0.1f);
+      }
     }
 
 

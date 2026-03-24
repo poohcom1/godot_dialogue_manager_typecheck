@@ -8,7 +8,9 @@ signal file_double_clicked(file_path: String)
 signal file_middle_clicked(file_path: String)
 
 
-const MODIFIED_SUFFIX: String = "(*)"
+const DialogueConstants = preload("../constants.gd")
+
+const MODIFIED_SUFFIX = "(*)"
 
 
 @export var icon: Texture2D
@@ -43,7 +45,7 @@ var filter: String = "":
 func _ready() -> void:
 	apply_theme()
 
-	filter_edit.placeholder_text = DMConstants.translate(&"files_list.filter")
+	filter_edit.placeholder_text = DialogueConstants.translate(&"files_list.filter")
 
 
 func focus_filter() -> void:
@@ -52,8 +54,8 @@ func focus_filter() -> void:
 
 func select_file(file: String) -> void:
 	list.deselect_all()
-	for i: int in range(0, list.get_item_count()):
-		var item_text: String = list.get_item_text(i).replace(MODIFIED_SUFFIX, "")
+	for i in range(0, list.get_item_count()):
+		var item_text = list.get_item_text(i).replace(MODIFIED_SUFFIX, "")
 		if item_text == get_nice_file(file, item_text.count("/") + 1):
 			list.select(i)
 			last_selected_file_path = file
@@ -69,15 +71,15 @@ func mark_file_as_unsaved(file: String, is_unsaved: bool) -> void:
 
 func update_file_map() -> void:
 	file_map = {}
-	for file: String in files:
+	for file in files:
 		var nice_file: String = get_nice_file(file)
 
 		# See if a value with just the file name is already in the map
-		for key: String in file_map.keys():
+		for key in file_map.keys():
 			if file_map[key] == nice_file:
-				var bit_count: int = nice_file.count("/") + 2
+				var bit_count = nice_file.count("/") + 2
 
-				var existing_nice_file: String = get_nice_file(key, bit_count)
+				var existing_nice_file = get_nice_file(key, bit_count)
 				nice_file = get_nice_file(file, bit_count)
 
 				while nice_file == existing_nice_file:
@@ -91,19 +93,19 @@ func update_file_map() -> void:
 
 
 func get_nice_file(file_path: String, path_bit_count: int = 1) -> String:
-	var bits: PackedStringArray = file_path.replace("res://", "").replace(".dialogue", "").split("/")
+	var bits = file_path.replace("res://", "").replace(".dialogue", "").split("/")
 	bits = bits.slice(-path_bit_count)
 	return "/".join(bits)
 
 
 func apply_filter() -> void:
 	list.clear()
-	for file: String in file_map.keys():
+	for file in file_map.keys():
 		if filter == "" or filter.to_lower() in file.to_lower():
-			var nice_file: String = file_map[file]
+			var nice_file = file_map[file]
 			if file in unsaved_files:
 				nice_file += MODIFIED_SUFFIX
-			var new_id: int = list.add_item(nice_file)
+			var new_id := list.add_item(nice_file)
 			list.set_item_icon(new_id, icon)
 
 	select_file(current_file_path)
@@ -116,7 +118,7 @@ func apply_theme() -> void:
 		list.add_theme_stylebox_override("panel", get_theme_stylebox("panel", "Panel"))
 
 
-#region Signals
+### Signals
 
 
 func _on_theme_changed() -> void:
@@ -128,8 +130,8 @@ func _on_filter_edit_text_changed(new_text: String) -> void:
 
 
 func _on_list_item_clicked(index: int, at_position: Vector2, mouse_button_index: int) -> void:
-	var item_text: String = list.get_item_text(index).replace(MODIFIED_SUFFIX, "")
-	var file: String = file_map.find_key(item_text)
+	var item_text = list.get_item_text(index).replace(MODIFIED_SUFFIX, "")
+	var file = file_map.find_key(item_text)
 
 	if mouse_button_index == MOUSE_BUTTON_LEFT or mouse_button_index == MOUSE_BUTTON_RIGHT:
 		select_file(file)
@@ -142,10 +144,7 @@ func _on_list_item_clicked(index: int, at_position: Vector2, mouse_button_index:
 
 
 func _on_list_item_activated(index: int) -> void:
-	var item_text: String = list.get_item_text(index).replace(MODIFIED_SUFFIX, "")
-	var file: String = file_map.find_key(item_text)
+	var item_text = list.get_item_text(index).replace(MODIFIED_SUFFIX, "")
+	var file = file_map.find_key(item_text)
 	select_file(file)
 	file_double_clicked.emit(file)
-
-
-#endregion

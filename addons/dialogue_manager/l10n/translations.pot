@@ -74,7 +74,7 @@ msgstr ""
 msgid "insert.templates"
 msgstr ""
 
-msgid "insert.label"
+msgid "insert.title"
 msgstr ""
 
 msgid "insert.dialogue"
@@ -98,7 +98,10 @@ msgstr ""
 msgid "insert.end_dialogue"
 msgstr ""
 
-msgid "generate_line_ids"
+msgid "generate_line_ids_for_project"
+msgstr ""
+
+msgid "generate_line_ids_for_file"
 msgstr ""
 
 msgid "generate_ids.warning_title"
@@ -203,7 +206,7 @@ msgstr ""
 msgid "files_list.filter"
 msgstr ""
 
-msgid "labels_list.filter"
+msgid "titles_list.filter"
 msgstr ""
 
 msgid "errors.key_not_found"
@@ -230,25 +233,25 @@ msgstr ""
 msgid "errors.unknown_using"
 msgstr ""
 
-msgid "errors.empty_label"
+msgid "errors.empty_title"
 msgstr ""
 
-msgid "errors.duplicate_label"
+msgid "errors.duplicate_title"
 msgstr ""
 
-msgid "errors.invalid_label_string"
+msgid "errors.invalid_title_string"
 msgstr ""
 
-msgid "errors.invalid_label_number"
+msgid "errors.invalid_title_number"
 msgstr ""
 
-msgid "errors.unknown_label"
+msgid "errors.unknown_title"
 msgstr ""
 
-msgid "errors.jump_to_invalid_label"
+msgid "errors.jump_to_invalid_title"
 msgstr ""
 
-msgid "errors.label_has_no_content"
+msgid "errors.title_has_no_content"
 msgstr ""
 
 msgid "errors.invalid_expression"
@@ -447,16 +450,4 @@ msgid "runtime.top_level_states_share_name"
 msgstr ""
 
 msgid "translation_plugin.character_name"
-msgstr ""
-
-msgid "Regions & Labels"
-msgstr ""
-
-msgid "Regions"
-msgstr ""
-
-msgid "Labels"
-msgstr ""
-
-msgid "Auto"
 msgstr ""
