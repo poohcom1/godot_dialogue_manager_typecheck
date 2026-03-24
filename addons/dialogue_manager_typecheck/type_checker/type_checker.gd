@@ -59,12 +59,6 @@ func check_type(dialogue_lines: Dictionary, using_states: PackedStringArray) -> 
 			if not err.is_ok():
 				errors[line_no] = err
 
-	var raw_lines := dialogue.raw_text.split("\n")
-	for i in range(len(raw_lines)):
-		var line := raw_lines[i]
-		if line.begins_with("#") and IGNORE_COMMENT in line.substr(1).split(" "):
-			ignores[i + 1] = true
-	
 	for line_no in ignores:
 		errors.erase(line_no + 1)
 
