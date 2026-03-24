@@ -19,7 +19,7 @@ func on_enter_tree() -> void:
 	EditorInterface.get_base_control().add_child(_quick_open)
 	_quick_open.files_list.file_double_clicked.connect(func(file_path: String):
 		var dialogue: DialogueResource = load(file_path)
-		var errors := await _type_checker.check_type(dialogue)
+		var errors := await _type_checker.check_type(dialogue.lines, dialogue.using_states)
 		if len(errors) == 0:
 			print_rich("[color=dark_gray][DM Typecheck][/color] No errors in %s." % dialogue.resource_path)
 		else:

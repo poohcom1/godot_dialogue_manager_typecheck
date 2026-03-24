@@ -47,15 +47,7 @@ func _on_parse() -> void:
 		_error_cache = {}
 		_add_gutter_warnings(_error_cache)
 
-	var resource: DialogueResource = DialogueResource.new()
-	resource.using_states = result.using_states
-	resource.labels = result.labels
-	resource.first_label = result.first_label
-	resource.character_names = result.character_names
-	resource.lines = result.lines
-	resource.raw_text = code_edit.text
-
-	_error_cache = await _type_checker.check_type(resource)
+	_error_cache = await _type_checker.check_type(result.lines, result.using_states)
 	_add_gutter_warnings(_error_cache)
 
 func _add_gutter_warnings(errors: Dictionary[int, TypeChecker.TypeError]) -> void:

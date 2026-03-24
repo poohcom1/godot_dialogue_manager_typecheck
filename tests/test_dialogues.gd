@@ -12,13 +12,13 @@ func after() -> void:
 
 func test_valid():
 	var dialogue: DialogueResource = load("res://tests/resources/valid.dialogue")
-	var results := await _type_checker.check_type(dialogue)
+	var results := await _type_checker.check_type(dialogue.lines, dialogue.using_states)
 	
 	assert_dict(results).is_empty()
 
 func test_invalid():
 	var dialogue: DialogueResource = load("res://tests/resources/invalid.dialogue")
-	var results := await _type_checker.check_type(dialogue)
+	var results := await _type_checker.check_type(dialogue.lines, dialogue.using_states)
 	
 	assert_int(results[5].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)
 	assert_int(results[6].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)

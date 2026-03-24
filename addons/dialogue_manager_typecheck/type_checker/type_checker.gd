@@ -21,19 +21,19 @@ func cleanup() -> void:
 	_dialogue_manager.free()
 
 # API
-func check_type(dialogue: DialogueResource) -> Dictionary[int, TypeError]:
+func check_type(dialogue_lines: Dictionary, using_states: PackedStringArray) -> Dictionary[int, TypeError]:
 	var global_scripts: Array[DataType] = []
 	# TODO: Also include extra_script_source
 	var autoload_shortcuts: PackedStringArray = DMSettings.get_setting(DMSettings.STATE_AUTOLOAD_SHORTCUTS, [])
-	for autoload in autoload_shortcuts + dialogue.using_states:
+	for autoload in autoload_shortcuts + using_states:
 		global_scripts.append(ScriptType.new(_get_autoload_script(autoload), autoload))
 	
 	# Analyze
 	var errors: Dictionary[int, TypeError] = {}
 	var ignores: Dictionary[int, bool] = {}
 
-	for key in dialogue.lines:
-		var line: Dictionary = dialogue.lines[key]
+	for key in dialogue_lines:
+		var line: Dictionary = dialogue_lines[key]
 		var line_no = int(line[&"id"]) + 1
 		var expressions := []
 

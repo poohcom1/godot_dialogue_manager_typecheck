@@ -16,7 +16,7 @@ func _ready():
 	var has_errors := false
 	for file in dialogue_files:
 		var dialogue: DialogueResource = load(file)
-		var errors := await type_checker.check_type(dialogue)
+		var errors := await type_checker.check_type(dialogue.lines, dialogue.using_states)
 		if len(errors) == 0:
 			print_rich(" [color=green]✓[/color] [color=gray]%s[/color]" % dialogue.resource_path)
 		else:
