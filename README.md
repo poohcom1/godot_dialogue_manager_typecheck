@@ -1,4 +1,4 @@
-# <img src="https://raw.githubusercontent.com/nathanhoad/godot_dialogue_manager/refs/heads/main/docs/media/logo.svg" height="24px"> Dialogue Manager _- Type Checker_
+# Dialogue Manager <img src="https://raw.githubusercontent.com/nathanhoad/godot_dialogue_manager/refs/heads/main/docs/media/logo.svg" height="24px"> _- Type Checker_
 
 <img alt="Dynamic TOML Badge" src="https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpoohcom1%2Fgodot_dialogue_manager_typecheck%2Frefs%2Fheads%2Fmain%2Faddons%2Fdialogue_manager_typecheck%2Fplugin.cfg&query=plugin.version&prefix=v&label=Dialogue%20Manager">
 
@@ -12,7 +12,7 @@ This is a mirror of the addon on my local project--I won't be maintaining it muc
 
 Version number tracks the base addon's version. If the base addon's version is higher, it may or may not work with that version.
 
-1. Download or clone the repo.
+1. Download the correct addon version from the [release page](https://github.com/poohcom1/godot_dialogue_manager_typecheck/releases).
 2. Copy `addons/dialogue_manager_typecheck` to your project's addon folder.
 3. Make sure dialogue_manager is already installed and activated.
 4. (If using C#) Run `dotnet build`.
@@ -40,7 +40,7 @@ The commands return a non-zero exit code if errors are found, so you can easily 
 
 ## Syntax Coverage
 
-The current analyzer should cover most basic use-cases that is valid expressions for Dialogue Manager, but there are a few exceptions and limitations. Some of them are just not implemented yet and may either be ignored or a false positive. Others are limitation due to GDScript's reflection API.
+The current analyzer should cover most basic use-cases that is valid expressions for Dialogue Manager, but there are a few exceptions and limitations. Some of them are not implemented yet and may be ignored or produce a false positive. Others are limitation due to GDScript's reflection API.
 
 | Syntax           | Example                                 | Comment                                                                                                                                         |
 | ---------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -48,4 +48,4 @@ The current analyzer should cover most basic use-cases that is valid expressions
 | Assignments      | `GameManager.string_val == 23`          | Not implemented.                                                                                                                                |
 | Built-in types   | `GameManager.string_val.to_lowered()`   | GDScript does not expose function API for built-in types. Could be manually coded, but likely not worth the overhead.                           |
 | Static member    | `GameManager.static_node.queue_freed()` | GDScript does not expose API to query static members. Partially implemented with regex search, but cannot consistently obtain member type info. |
-| C# functions     |                                         | Type-checking is implemented, but may choke on non-variant types.                                                                               |
+| C# functions     |                                         | Type-checking is partially implemented; may choke on non-variant types.                                                                               |
