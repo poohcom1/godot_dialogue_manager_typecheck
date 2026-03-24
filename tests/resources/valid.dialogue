@@ -48,10 +48,3 @@ Info: Finished valid dialogue.
 do get_tree().quit()
 
 => END
-
-~ extra
-# @type_ignore
-do unknown_func()
-#@type_ignore
-do unknown_func()
-=> END
