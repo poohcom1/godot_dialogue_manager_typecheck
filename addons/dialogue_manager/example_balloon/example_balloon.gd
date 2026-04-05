@@ -5,8 +5,8 @@ class_name DialogueManagerExampleBalloon extends CanvasLayer
 ## The dialogue resource
 @export var dialogue_resource: DialogueResource
 
-## Start from a given cue when using balloon as a [Node] in a scene.
-@export var start_from_cue: String = ""
+## Start from a given title when using balloon as a [Node] in a scene.
+@export var start_from_title: String = ""
 
 ## If running as a [Node] in a scene then auto start the dialogue.
 @export var auto_start: bool = false
@@ -88,7 +88,7 @@ func _ready() -> void:
 		start()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if is_instance_valid(dialogue_line):
 		progress.visible = not dialogue_label.is_typing and dialogue_line.responses.size() == 0 and not dialogue_line.has_tag("voice")
 
@@ -110,14 +110,14 @@ func _notification(what: int) -> void:
 
 
 ## Start some dialogue
-func start(with_dialogue_resource: DialogueResource = null, cue: String = "", extra_game_states: Array = []) -> void:
+func start(with_dialogue_resource: DialogueResource = null, title: String = "", extra_game_states: Array = []) -> void:
 	temporary_game_states = [self] + extra_game_states
 	is_waiting_for_input = false
 	if is_instance_valid(with_dialogue_resource):
 		dialogue_resource = with_dialogue_resource
-	if not cue.is_empty():
-		start_from_cue = cue
-	dialogue_line = await dialogue_resource.get_next_dialogue_line(start_from_cue, temporary_game_states)
+	if not title.is_empty():
+		start_from_title = title
+	dialogue_line = await dialogue_resource.get_next_dialogue_line(start_from_title, temporary_game_states)
 	show()
 
 

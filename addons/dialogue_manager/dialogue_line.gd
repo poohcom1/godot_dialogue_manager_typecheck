@@ -50,6 +50,9 @@ var tags: PackedStringArray = []
 ## The mutation details if this is a mutation line (where [code]type == TYPE_MUTATION[/code]).
 var mutation: Dictionary = {}
 
+## The conditions to check before including this line in the flow of dialogue. If failed the line will be skipped over.
+var conditions: Dictionary = {}
+
 
 func _init(data: Dictionary = {}) -> void:
 	if data.size() > 0:
@@ -75,23 +78,6 @@ func _init(data: Dictionary = {}) -> void:
 				mutation = data.mutation
 
 
-## Restore a [DialogueLine] from a [code]to_serialized[/code] string, providing any extra
-## game states that would have been used fetch the line in the first place.
-static func new_from_serialized(serialized_data: String, extra_game_states_: Array = []) -> DialogueLine:
-	var bits: PackedStringArray = serialized_data.split("=>")
-	var id_bits: PackedStringArray = bits[0].split("@")
-	var resource: DialogueResource = load("uid://" + id_bits[0])
-	var line: DialogueLine = await resource.get_next_dialogue_line(id_bits[1], extra_game_states_)
-	line.next_id = bits[1]
-	return line
-
-
-## Serialize this [DialogueLine] to a string. Restore with
-## [code]DialogueLine.new_from_serialized(...)[/code].
-func to_serialized() -> String:
-	return "=>".join([id, next_id])
-
-
 func _to_string() -> String:
 	match type:
 		DMConstants.TYPE_DIALOGUE:
@@ -104,7 +90,7 @@ func _to_string() -> String:
 ## Check if a dialogue line has a given tag.
 func has_tag(tag_name: String) -> bool:
 	var wrapped: String = "%s=" % tag_name
-	for t: String in tags:
+	for t in tags:
 		if t.begins_with(wrapped):
 			return true
 	return false
@@ -113,7 +99,7 @@ func has_tag(tag_name: String) -> bool:
 ## Get the value of a tag if the tag is in the form of [code]tag=value[/code]
 func get_tag_value(tag_name: String) -> String:
 	var wrapped: String = "%s=" % tag_name
-	for t: String in tags:
+	for t in tags:
 		if t.begins_with(wrapped):
 			return t.replace(wrapped, "").strip_edges()
 	return ""

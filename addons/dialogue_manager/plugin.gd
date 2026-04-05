@@ -2,7 +2,6 @@
 class_name DMPlugin extends EditorPlugin
 
 
-@warning_ignore("unused_signal")
 signal cache_file_content_changed(path: String, new_content: String)
 
 
@@ -16,7 +15,6 @@ var import_plugin: DMImportPlugin
 var export_plugin: DMExportPlugin
 var inspector_plugin: DMInspectorPlugin
 var translation_parser_plugin: DMTranslationParserPlugin
-var debugger_plugin: DMDebuggerPlugin
 var main_view: Control
 var find_in_dialogue_view: Control
 
@@ -51,9 +49,6 @@ func _enter_tree() -> void:
 		translation_parser_plugin = DMTranslationParserPlugin.new()
 		add_translation_parser_plugin(translation_parser_plugin)
 
-		debugger_plugin = DMDebuggerPlugin.new()
-		add_debugger_plugin(debugger_plugin)
-
 		main_view = MainView.instantiate()
 		EditorInterface.get_editor_main_screen().add_child(main_view)
 		_make_visible(false)
@@ -63,7 +58,7 @@ func _enter_tree() -> void:
 		EditorInterface.get_file_system_dock().files_moved.connect(_on_files_moved)
 		EditorInterface.get_file_system_dock().file_removed.connect(_on_file_removed)
 
-		add_tool_submenu_item("Dialogue", _create_translations_tool_menu_item())
+		add_tool_menu_item("Create copy of dialogue example balloon...", _copy_dialogue_balloon)
 
 
 func _exit_tree() -> void:
@@ -79,9 +74,6 @@ func _exit_tree() -> void:
 	remove_translation_parser_plugin(translation_parser_plugin)
 	translation_parser_plugin = null
 
-	remove_debugger_plugin(debugger_plugin)
-	debugger_plugin = null
-
 	if is_instance_valid(main_view):
 		main_view.queue_free()
 
@@ -90,7 +82,7 @@ func _exit_tree() -> void:
 	EditorInterface.get_file_system_dock().files_moved.disconnect(_on_files_moved)
 	EditorInterface.get_file_system_dock().file_removed.disconnect(_on_file_removed)
 
-	remove_tool_menu_item("Dialogue")
+	remove_tool_menu_item("Create copy of dialogue example balloon...")
 
 	instance = null
 
@@ -112,7 +104,7 @@ func _get_plugin_icon() -> Texture2D:
 	return load(get_plugin_path() + "/assets/icon.svg")
 
 
-func _handles(object: Object) -> bool:
+func _handles(object) -> bool:
 	var editor_settings: EditorSettings = EditorInterface.get_editor_settings()
 	var external_editor: String = editor_settings.get_setting("text_editor/external/exec_path")
 	var use_external_editor: bool = editor_settings.get_setting("text_editor/external/use_external_editor") and external_editor != ""
@@ -125,7 +117,7 @@ func _handles(object: Object) -> bool:
 	return object is DialogueResource
 
 
-func _edit(object: Object) -> void:
+func _edit(object) -> void:
 	if is_instance_valid(main_view) and is_instance_valid(object):
 		main_view.open_resource(object)
 
@@ -175,26 +167,13 @@ func _build() -> bool:
 	return true
 
 
-## Open a [DialogueResource] in the dialogue editor.
-static func open_file(resource_or_path: Variant) -> void:
+## Open a [Dialogue Resource] and jump to a given title.
+static func open_file_at_title(resource_or_path: Variant, title: String, create_if_none: bool = false) -> void:
 	var resource: DialogueResource = resource_or_path if resource_or_path is DialogueResource else load(resource_or_path)
-	instance.main_view.open_file(resource.resource_path)
-	EditorInterface.set_main_screen_editor("Dialogue")
+	EditorInterface.edit_resource(resource)
+	instance.main_view.go_to_title(title, create_if_none)
 
 
-## Open a [DialogueResource] and jump to a given cue.
-static func open_file_at_cue(resource_or_path: Variant, cue: String, create_if_none: bool = false) -> void:
-	open_file(resource_or_path)
-	instance.main_view.go_to_cue(cue, create_if_none)
-
-
-## Open a [DialogueResource] and jump to a given line number.
-static func open_file_at_line(resource_or_path: Variant, line_number: int) -> void:
-	open_file(resource_or_path)
-	instance.main_view.go_to_line_number(line_number)
-
-
-## Show the panel for finding text in dialogue files.
 static func show_find_in_dialogue() -> void:
 	instance._show_find_in_dialogue()
 
@@ -262,7 +241,7 @@ static func get_editor_shortcuts() -> Dictionary:
 		]
 	}
 
-	var paths: EditorPaths = EditorInterface.get_editor_paths()
+	var paths = EditorInterface.get_editor_paths()
 	var settings: Resource = null
 	for version: String in ["4.5", "4.4", "4.3", "4"]:
 		var path: String = paths.get_config_dir() + "/editor_settings-" + version + ".tres"
@@ -285,7 +264,7 @@ static func get_editor_shortcuts() -> Dictionary:
 
 static func _create_event(string: String) -> InputEventKey:
 	var event: InputEventKey = InputEventKey.new()
-	var bits: PackedStringArray = string.split("+")
+	var bits = string.split("+")
 	event.keycode = OS.find_keycode_from_string(bits[bits.size() - 1])
 	event.shift_pressed = bits.has("Shift")
 	event.alt_pressed = bits.has("Alt")
@@ -378,36 +357,10 @@ func _update_localization() -> void:
 		ProjectSettings.save()
 
 
-func _create_translations_tool_menu_item() -> PopupMenu:
-	var tool_menu: PopupMenu = PopupMenu.new()
-	tool_menu.add_icon_item(_get_plugin_icon(), "Create balloon...")
-	tool_menu.add_icon_item(main_view.get_theme_icon("Translation", "EditorIcons"), DMConstants.translate("generate_line_ids"))
-	tool_menu.index_pressed.connect(func(index: int) -> void:
-		match index:
-			0: # create balloon
-				_create_dialogue_balloon()
-			1: # generate IDs
-				var confirm: ConfirmationDialog = ConfirmationDialog.new()
-				confirm.title = DMConstants.translate("generate_ids.warning_title")
-				confirm.dialog_text = DMConstants.translate("generate_ids.warning_text")
-				confirm.ok_button_text = DMConstants.translate("generate_ids.ok_button")
-				confirm.confirmed.connect(func() -> void:
-					confirm.queue_free()
-					DMTranslationUtilities.generate_static_line_ids_for_project()
-				)
-				confirm.canceled.connect(func() -> void:
-					confirm.queue_free()
-				)
-				add_child(confirm)
-				confirm.popup_centered()
-	)
-	return tool_menu
+### Callbacks
 
 
-#region Callbacks
-
-
-func _create_dialogue_balloon() -> void:
+func _copy_dialogue_balloon() -> void:
 	var scale: float = EditorInterface.get_editor_scale()
 	var directory_dialog: FileDialog = FileDialog.new()
 	var label: Label = Label.new()
@@ -415,7 +368,7 @@ func _create_dialogue_balloon() -> void:
 	directory_dialog.get_vbox().add_child(label)
 	directory_dialog.file_mode = FileDialog.FILE_MODE_OPEN_DIR
 	directory_dialog.min_size = Vector2(600, 500) * scale
-	directory_dialog.dir_selected.connect(func(path: String) -> void:
+	directory_dialog.dir_selected.connect(func(path):
 		var plugin_path: String = get_plugin_path()
 		var is_dotnet: bool = DMSettings.check_for_dotnet_solution()
 
@@ -474,15 +427,15 @@ func _housekeeping() -> void:
 		var plugin_path: String = get_plugin_path()
 		var balloon_file_names: PackedStringArray = ["example_balloon.tscn", "small_example_balloon.tscn"]
 		for balloon_file_name: String in balloon_file_names:
-			var target_balloon_path: String = plugin_path + "/example_balloon/" + balloon_file_name
-			var balloon_content: String = FileAccess.get_file_as_string(target_balloon_path)
+			var balloon_path: String = plugin_path + "/example_balloon/" + balloon_file_name
+			var balloon_content: String = FileAccess.get_file_as_string(balloon_path)
 			if "example_balloon.gd" in balloon_content and DMSettings.check_for_dotnet_solution():
 				balloon_content = balloon_content \
 					# Replace script path with the C# one
 					.replace("example_balloon.gd", "ExampleBalloon.cs") \
 					# Replace script UID with the C# one
 					.replace(ResourceUID.id_to_text(ResourceLoader.get_resource_uid(plugin_path + "/example_balloon/example_balloon.gd")), ResourceUID.id_to_text(ResourceLoader.get_resource_uid(plugin_path + "/example_balloon/ExampleBalloon.cs")))
-				var balloon_file: FileAccess = FileAccess.open(target_balloon_path, FileAccess.WRITE)
+				var balloon_file: FileAccess = FileAccess.open(balloon_path, FileAccess.WRITE)
 				balloon_file.store_string(balloon_content)
 				balloon_file.close()
 			elif "ExampleBalloon.cs" in balloon_content and not DMSettings.check_for_dotnet_solution():
@@ -491,7 +444,7 @@ func _housekeeping() -> void:
 					.replace("ExampleBalloon.cs", "example_balloon.gd") \
 					# Replace script UID with the GDScript one
 					.replace(ResourceUID.id_to_text(ResourceLoader.get_resource_uid(plugin_path + "/example_balloon/ExampleBalloon.cs")), ResourceUID.id_to_text(ResourceLoader.get_resource_uid(plugin_path + "/example_balloon/example_balloon.gd")))
-				var balloon_file: FileAccess = FileAccess.open(target_balloon_path, FileAccess.WRITE)
+				var balloon_file: FileAccess = FileAccess.open(balloon_path, FileAccess.WRITE)
 				balloon_file.store_string(balloon_content)
 				balloon_file.close()
 
@@ -525,9 +478,8 @@ func _housekeeping() -> void:
 			balloon_file.close()
 
 
-#endregion
 
-#region Signals
+### Signals
 
 
 func _on_files_moved(old_file: String, new_file: String) -> void:
@@ -536,11 +488,7 @@ func _on_files_moved(old_file: String, new_file: String) -> void:
 
 
 func _on_file_removed(file: String) -> void:
-	DMSettings.forget_path(file)
 	_update_import_paths(file, "")
 	if is_instance_valid(main_view):
 		main_view.close_file(file)
 	_update_localization()
-
-
-#endregion

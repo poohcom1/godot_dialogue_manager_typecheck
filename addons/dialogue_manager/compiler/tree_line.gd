@@ -31,16 +31,16 @@ func _init(initial_id: String) -> void:
 
 
 func _to_string() -> String:
-	var tabs: Array = []
+	var tabs = []
 	tabs.resize(indent)
 	tabs.fill("\t")
-	var tab: String = "".join(tabs)
+	tabs = "".join(tabs)
 
-	return tab.join([tab + "{\n",
+	return tabs.join([tabs + "{\n",
 		"\tid: %s\n" % [id],
 		"\ttype: %s\n" % [type],
 		"\tis_random: %s\n" % ["true" if is_random else "false"],
 		"\ttext: %s\n" % [text],
 		"\tnotes: %s\n" % [notes],
-		"\tchildren: []\n" if children.size() == 0 else "\tchildren: [\n" + ",\n".join(children.map(func(child: DMTreeLine) -> String: return str(child))) + "]\n",
+		"\tchildren: []\n" if children.size() == 0 else "\tchildren: [\n" + ",\n".join(children.map(func(child): return str(child))) + "]\n",
 	"}"])

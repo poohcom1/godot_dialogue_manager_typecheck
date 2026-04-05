@@ -6,7 +6,9 @@ signal failed()
 signal updated(updated_to_version: String)
 
 
-const TEMP_FILE_NAME: String = "user://temp.zip"
+const DialogueConstants = preload("../constants.gd")
+
+const TEMP_FILE_NAME = "user://temp.zip"
 
 
 @onready var logo: TextureRect = %Logo
@@ -17,17 +19,17 @@ const TEMP_FILE_NAME: String = "user://temp.zip"
 var next_version_release: Dictionary:
 	set(value):
 		next_version_release = value
-		label.text = DMConstants.translate(&"update.is_available_for_download") % value.tag_name.substr(1)
+		label.text = DialogueConstants.translate(&"update.is_available_for_download") % value.tag_name.substr(1)
 	get:
 		return next_version_release
 
 
 func _ready() -> void:
-	$VBox/Center/DownloadButton.text = DMConstants.translate(&"update.download_update")
-	$VBox/Center2/NotesButton.text = DMConstants.translate(&"update.release_notes")
+	$VBox/Center/DownloadButton.text = DialogueConstants.translate(&"update.download_update")
+	$VBox/Center2/NotesButton.text = DialogueConstants.translate(&"update.release_notes")
 
 
-#region Signals
+### Signals
 
 
 func _on_download_button_pressed() -> void:
@@ -39,10 +41,10 @@ func _on_download_button_pressed() -> void:
 
 	http_request.request(next_version_release.zipball_url)
 	download_button.disabled = true
-	download_button.text = DMConstants.translate(&"update.downloading")
+	download_button.text = DialogueConstants.translate(&"update.downloading")
 
 
-func _on_http_request_request_completed(result: int, _response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+func _on_http_request_request_completed(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray) -> void:
 	if result != HTTPRequest.RESULT_SUCCESS:
 		failed.emit()
 		return
@@ -58,13 +60,13 @@ func _on_http_request_request_completed(result: int, _response_code: int, _heade
 	zip_reader.open(TEMP_FILE_NAME)
 	var files: PackedStringArray = zip_reader.get_files()
 
-	var base_path: String = files[1]
+	var base_path = files[1]
 	# Remove archive folder
 	files.remove_at(0)
 	# Remove assets folder
 	files.remove_at(0)
 
-	for path: String in files:
+	for path in files:
 		var new_file_path: String = path.replace(base_path, "")
 		if path.ends_with("/"):
 			DirAccess.make_dir_recursive_absolute("res://addons/%s" % new_file_path)
@@ -80,6 +82,3 @@ func _on_http_request_request_completed(result: int, _response_code: int, _heade
 
 func _on_notes_button_pressed() -> void:
 	OS.shell_open(next_version_release.html_url)
-
-
-#endregion
