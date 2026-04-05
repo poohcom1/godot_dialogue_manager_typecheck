@@ -16,8 +16,8 @@ func show_error() -> void:
 	else:
 		show()
 		count_label.text = DMConstants.translate(&"n_of_n").format({ index = error_index + 1, total = errors.size() })
-		var error: DMError = errors[error_index]
-		if error is DMWarning:
+		var error = errors[error_index]
+		if "warning" in error:
 			error_button.text = "Type error at {line}, {column}: {message}".format({ line = error.line_number, column = error.warning.column_number, message = error.warning.msg })
 			apply_warning_theme()
 		else:
@@ -26,11 +26,10 @@ func show_error() -> void:
 
 func add_warnings(warnings: Dictionary[int, TypeChecker.TypeError]) -> void:
 	for line_number in warnings:
-		var error := DMWarning.new({})
+		var error := {}
 		error.line_number = line_number
+		error.column_number = warnings[line_number].column_number
 		error.warning = warnings[line_number]
 		errors.append(error)
 	errors.sort_custom(func(a, b): return a.line_number < b.line_number)
 
-class DMWarning extends DMError:
-	var warning: TypeChecker.TypeError
