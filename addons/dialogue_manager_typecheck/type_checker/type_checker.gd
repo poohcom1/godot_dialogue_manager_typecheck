@@ -95,7 +95,9 @@ static func _parse_expression_list(tokens: Array) -> Array[ASTNode]:
 				# Recursive Step: DM stores function args as nested arrays/tokens
 				if token.has(&"value"):
 					for arg_tokens in token[&"value"]:
-						func_node.args += _parse_expression_list(arg_tokens)
+						var filtered_tokens = arg_tokens.filter(func(t): return t.type != DMConstants.TOKEN_PARENS_CLOSE)
+						if filtered_tokens.size() > 0:
+							func_node.args.append(ASTExpression.new(_parse_expression_list(filtered_tokens)))
 				new_node = func_node
 				
 			DMConstants.TOKEN_STRING:
@@ -163,7 +165,21 @@ func _verify_expression(node: ASTNode, parent_type: DataType, global_types: Arra
 		base_classes = []
 		base_classes.assign([parent_type])
 	
-	if node is ASTOp:
+	if node is ASTExpression:
+		var expression_type: DataType = VariantType.new()
+		var has_operator := false
+		for item in node.items:
+			if item is ASTOp:
+				has_operator = true
+				continue
+			var item_err := _verify_expression(item, null, global_types, item, is_static)
+			if not item_err.is_ok():
+				return item_err
+			expression_type = item_err.expr_ret
+		if has_operator:
+			return TypeError.ok(VariantType.new())
+		return TypeError.ok(expression_type)
+	elif node is ASTOp:
 		return TypeError.ok(null)
 	elif node is ASTLiteral:
 		return TypeError.ok(BuiltinType.new(node.literal_type))
@@ -184,24 +200,31 @@ func _verify_expression(node: ASTNode, parent_type: DataType, global_types: Arra
 			return SubscriptInvalidIndex.new(indexer_err.expr_ret, parent_type, node, base)
 		return TypeError.ok(null)
 	elif node is ASTFunc:
-		var found_method: Dictionary = {}
+		var found_methods: Array[Dictionary] = []
 		for class_type in base_classes:
 			if parent_type == null:
 				for method_info in BUILT_IN_TYPES:
 					if method_info.name == node.identifier:
-						found_method = method_info
+						found_methods.append(method_info)
 			for method_info in class_type.get_class_method_list():
 				if method_info.name == node.identifier:
 					if is_static and not (method_info.flags & MethodFlags.METHOD_FLAG_STATIC):
 						return StaticFuncAccess.new(node, base)
-					found_method = method_info
+					found_methods.append(method_info)
 			# Maybe a cs async function
 			if _cs_type_checker and class_type is ScriptType and class_type.class_script.resource_path.ends_with(".cs"):
-				var method_info = _cs_type_checker.GetCsScriptMethodInfo(class_type.class_script, node.identifier)
-				if method_info != null:
-					found_method = method_info
+				var method_infos = _cs_type_checker.GetCsScriptMethodInfo(class_type.class_script, node.identifier)
+				for method_info in method_infos:
+					if method_info == null:
+						continue
+					found_methods.append(method_info)
 		
-		if not found_method.is_empty():
+		found_methods = found_methods.filter(func(x): return not x.is_empty())
+		
+		for j in range(len(found_methods)):
+			var found_method := found_methods[j]
+			var is_last := j == len(found_methods) - 1
+
 			# Check args count
 			var vararg_method := bool(found_method.get("flags", 1) & METHOD_FLAG_VARARG)
 			var expected_arg_count := len(found_method.get("args", []))
@@ -213,14 +236,23 @@ func _verify_expression(node: ASTNode, parent_type: DataType, global_types: Arra
 			)
 
 			if not correct_arg_count:
-				return ArgsCount.new(found_method.get("args", []).size(), node.args.size(), node, base)
+				if is_last:
+					return ArgsCount.new(found_method.get("args", []).size(), node.args.size(), node, base)
+				else:
+					continue
 
 			# Check args
+			var arg_check_failed := false
 			for i in range(len(node.args)):
 				var arg_node := (node as ASTFunc).args[i]
 				var err := _verify_expression(arg_node, null, global_types, arg_node) # reset context as it's not chained
+
 				if not err.is_ok():
-					return err
+					if is_last:
+						return err
+					else:
+						arg_check_failed = true
+						break
 				
 				if len(found_method.args) <= i:
 					assert(vararg_method, "Arg exceeds method arg count, but method is not a vararg.")
@@ -228,10 +260,18 @@ func _verify_expression(node: ASTNode, parent_type: DataType, global_types: Arra
 				
 				var expected_arg: DataType = _get_classtype_from_property_info(found_method.args[i])
 				var actual_arg: DataType = err.expr_ret
-				if not DataType.can_assign(actual_arg, expected_arg):
-					return ArgMismatch.new(i + 1, expected_arg, actual_arg, node, base)
 
-			return TypeError.ok(_get_classtype_from_property_info(found_method.get("return", {})))
+				if not DataType.can_assign(actual_arg, expected_arg):
+					if is_last:
+						return ArgMismatch.new(i + 1, expected_arg, actual_arg, node, base)
+					else:
+						arg_check_failed = true
+						break
+			if arg_check_failed:
+				continue
+
+			# all good then
+			return TypeError.ok(_get_classtype_from_property_info(found_methods[0].get("return", {})))
 
 		return UnknownMethod.new(node, base, parent_type)
 	# Must be member then
@@ -296,7 +336,7 @@ func _verify_expression(node: ASTNode, parent_type: DataType, global_types: Arra
 						else:
 							if matched.names.has("type"):
 								# TODO: This only supports object types, need to find a way to detect if built-in type based on type string
-								member_type = _get_classtype_from_property_info({ &"type": TYPE_OBJECT, &"class_name": matched.strings[matched.names.type] })
+								member_type = _get_classtype_from_property_info({&"type": TYPE_OBJECT, &"class_name": matched.strings[matched.names.type]})
 		if member_type == null:
 			return UnknownProperty.new(node, base, parent_type, is_static)
 		if node.next != null:
@@ -315,7 +355,7 @@ static func _get_autoload_script(autoload: StringName) -> Script:
 		var script = node.get_script()
 		node.free()
 		return script
-	elif not autoload_res is Script:
+	elif not autoload_res is Script and autoload_res != null:
 		return autoload_res.get_script()
 	else:
 		# Script or null
@@ -355,7 +395,7 @@ static func _get_classtype_from_property_info(property_info: Dictionary) -> Data
 		var i := 0
 		while node != null:
 			if node == target_node:
-				return display
+				return display + "." + node.to_path()
 			if node is ASTSubscript:
 				display += node.to_path()
 			else:
@@ -387,6 +427,15 @@ class ASTFunc extends ASTIdentifier:
 
 	func _to_string() -> String:
 		return "Func<%s(%s)>" % [identifier, args]
+
+class ASTExpression extends ASTNode:
+	var items: Array[ASTNode] = []
+
+	func _init(p_items: Array[ASTNode]) -> void:
+		items = p_items
+
+	func to_path() -> String:
+		return "Expression"
 
 ## Represents the 
 class ASTSubscript extends ASTNode:
@@ -496,7 +545,7 @@ class ArgsCount extends TypeError:
 class ArgMismatch extends TypeError:
 	func _init(ind: int, expected: DataType, actual: DataType, node: ASTNode, base: ASTNode) -> void:
 		column_number = base.column_number
-		super._init(TypeErrorType.ArgMismatch, 'Expected argument %d to be of type %s, got %s in "%s()".' % [ind, expected.get_class_name(), actual.get_class_name(), base.get_path_to(node)])
+		super._init(TypeErrorType.ArgMismatch, 'Expected argument %d to be of type "%s", got "%s" in "%s()".' % [ind, expected.get_class_name(), actual.get_class_name(), base.get_path_to(node)])
 
 class SubscriptInvalidIndex extends TypeError:
 	func _init(expected: DataType, container_type: DataType, node: ASTNode, base: ASTNode) -> void:
@@ -583,35 +632,35 @@ class ScriptType extends DataType:
 
 const BUILT_IN_TYPES := [
 	# Custom string casting
-	{ &"name": "str", &"args": [{ &"name": "from", &"type": TYPE_NIL }], &"return": { &"type": TYPE_STRING } },
+	{&"name": "str", &"args": [ {&"name": "from", &"type": TYPE_NIL}], &"return": {&"type": TYPE_STRING}},
 	# Vectors
-	{ &"name": "Vector2", &"args": [{ &"name": "x", &"type": TYPE_FLOAT }, { &"name": "y", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_VECTOR2 } },
-	{ &"name": "Vector2i", &"args": [{ &"name": "x", &"type": TYPE_INT }, { &"name": "y", &"type": TYPE_INT }], &"return": { &"type": TYPE_VECTOR2I } },
-	{ &"name": "Vector3", &"args": [{ &"name": "x", &"type": TYPE_FLOAT }, { &"name": "y", &"type": TYPE_FLOAT }, { &"name": "z", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_VECTOR3 } },
-	{ &"name": "Vector3i", &"args": [{ &"name": "x", &"type": TYPE_INT }, { &"name": "y", &"type": TYPE_INT }, { &"name": "z", &"type": TYPE_INT }], &"return": { &"type": TYPE_VECTOR3I } },
-	{ &"name": "Vector4", &"args": [{ &"name": "x", &"type": TYPE_FLOAT }, { &"name": "y", &"type": TYPE_FLOAT }, { &"name": "z", &"type": TYPE_FLOAT }, { &"name": "w", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_VECTOR4 } },
-	{ &"name": "Vector4i", &"args": [{ &"name": "x", &"type": TYPE_INT }, { &"name": "y", &"type": TYPE_INT }, { &"name": "z", &"type": TYPE_INT }, { &"name": "w", &"type": TYPE_INT }], &"return": { &"type": TYPE_VECTOR4I } },
+	{&"name": "Vector2", &"args": [ {&"name": "x", &"type": TYPE_FLOAT}, {&"name": "y", &"type": TYPE_FLOAT}], &"return": {&"type": TYPE_VECTOR2}},
+	{&"name": "Vector2i", &"args": [ {&"name": "x", &"type": TYPE_INT}, {&"name": "y", &"type": TYPE_INT}], &"return": {&"type": TYPE_VECTOR2I}},
+	{&"name": "Vector3", &"args": [ {&"name": "x", &"type": TYPE_FLOAT}, {&"name": "y", &"type": TYPE_FLOAT}, {&"name": "z", &"type": TYPE_FLOAT}], &"return": {&"type": TYPE_VECTOR3}},
+	{&"name": "Vector3i", &"args": [ {&"name": "x", &"type": TYPE_INT}, {&"name": "y", &"type": TYPE_INT}, {&"name": "z", &"type": TYPE_INT}], &"return": {&"type": TYPE_VECTOR3I}},
+	{&"name": "Vector4", &"args": [ {&"name": "x", &"type": TYPE_FLOAT}, {&"name": "y", &"type": TYPE_FLOAT}, {&"name": "z", &"type": TYPE_FLOAT}, {&"name": "w", &"type": TYPE_FLOAT}], &"return": {&"type": TYPE_VECTOR4}},
+	{&"name": "Vector4i", &"args": [ {&"name": "x", &"type": TYPE_INT}, {&"name": "y", &"type": TYPE_INT}, {&"name": "z", &"type": TYPE_INT}, {&"name": "w", &"type": TYPE_INT}], &"return": {&"type": TYPE_VECTOR4I}},
 	# Quaternion
-	{ &"name": "Quaternion", &"args": [{ &"name": "x", &"type": TYPE_FLOAT }, { &"name": "y", &"type": TYPE_FLOAT }, { &"name": "z", &"type": TYPE_FLOAT }, { &"name": "w", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_QUATERNION } },
+	{&"name": "Quaternion", &"args": [ {&"name": "x", &"type": TYPE_FLOAT}, {&"name": "y", &"type": TYPE_FLOAT}, {&"name": "z", &"type": TYPE_FLOAT}, {&"name": "w", &"type": TYPE_FLOAT}], &"return": {&"type": TYPE_QUATERNION}},
 	# Callable Overloads
-	{ &"name": "Callable", &"args": [], &"return": { &"type": TYPE_CALLABLE } },
-	{ &"name": "Callable", &"args": [{ &"name": "method", &"type": TYPE_STRING_NAME }], &"return": { &"type": TYPE_CALLABLE } },
-	{ &"name": "Callable", &"args": [{ &"name": "object", &"type": TYPE_OBJECT }, { &"name": "method", &"type": TYPE_STRING_NAME }], &"return": { &"type": TYPE_CALLABLE } },
+	{&"name": "Callable", &"args": [], &"return": {&"type": TYPE_CALLABLE}},
+	{&"name": "Callable", &"args": [ {&"name": "method", &"type": TYPE_STRING_NAME}], &"return": {&"type": TYPE_CALLABLE}},
+	{&"name": "Callable", &"args": [ {&"name": "object", &"type": TYPE_OBJECT}, {&"name": "method", &"type": TYPE_STRING_NAME}], &"return": {&"type": TYPE_CALLABLE}},
 	# Color Overloads
-	{ &"name": "Color", &"args": [], &"return": { &"type": TYPE_COLOR } },
-	{ &"name": "Color", &"args": [{ &"name": "from", &"type": TYPE_NIL }], &"return": { &"type": TYPE_COLOR } },
-	{ &"name": "Color", &"args": [{ &"name": "from", &"type": TYPE_NIL }, { &"name": "alpha", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_COLOR } },
-	{ &"name": "Color", &"args": [{ &"name": "r", &"type": TYPE_FLOAT }, { &"name": "g", &"type": TYPE_FLOAT }, { &"name": "b", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_COLOR } },
-	{ &"name": "Color", &"args": [{ &"name": "r", &"type": TYPE_FLOAT }, { &"name": "g", &"type": TYPE_FLOAT }, { &"name": "b", &"type": TYPE_FLOAT }, { &"name": "a", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_COLOR } },
+	{&"name": "Color", &"args": [], &"return": {&"type": TYPE_COLOR}},
+	{&"name": "Color", &"args": [ {&"name": "from", &"type": TYPE_NIL}], &"return": {&"type": TYPE_COLOR}},
+	{&"name": "Color", &"args": [ {&"name": "from", &"type": TYPE_NIL}, {&"name": "alpha", &"type": TYPE_FLOAT}], &"return": {&"type": TYPE_COLOR}},
+	{&"name": "Color", &"args": [ {&"name": "r", &"type": TYPE_FLOAT}, {&"name": "g", &"type": TYPE_FLOAT}, {&"name": "b", &"type": TYPE_FLOAT}], &"return": {&"type": TYPE_COLOR}},
+	{&"name": "Color", &"args": [ {&"name": "r", &"type": TYPE_FLOAT}, {&"name": "g", &"type": TYPE_FLOAT}, {&"name": "b", &"type": TYPE_FLOAT}, {&"name": "a", &"type": TYPE_FLOAT}], &"return": {&"type": TYPE_COLOR}},
 	# Resource Loading
-	{ &"name": "load", &"args": [{ &"name": "path", &"type": TYPE_STRING }], &"return": { &"type": TYPE_OBJECT } },
-	{ &"name": "Load", &"args": [{ &"name": "path", &"type": TYPE_STRING }], &"return": { &"type": TYPE_OBJECT } },
+	{&"name": "load", &"args": [ {&"name": "path", &"type": TYPE_STRING}], &"return": {&"type": TYPE_OBJECT}},
+	{&"name": "Load", &"args": [ {&"name": "path", &"type": TYPE_STRING}], &"return": {&"type": TYPE_OBJECT}},
 	# Custom Logic / Dice
-	{ &"name": "roll_dice", &"args": [{ &"name": "sides", &"type": TYPE_INT }], &"return": { &"type": TYPE_INT } },
-	{ &"name": "RollDice", &"args": [{ &"name": "sides", &"type": TYPE_INT }], &"return": { &"type": TYPE_INT } },
-	{ &"name": "debug", &"args": [], &"return": { &"type": TYPE_NIL }, &"flags": METHOD_FLAG_NORMAL | METHOD_FLAG_VARARG },
-	{ &"name": "Debug", &"args": [], &"return": { &"type": TYPE_NIL }, &"flags": METHOD_FLAG_NORMAL | METHOD_FLAG_VARARG },
-	{ &"name": "wait", &"args": [{ &"name": "time", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_NIL } },
-	{ &"name": "Wait", &"args": [{ &"name": "time", &"type": TYPE_FLOAT }], &"return": { &"type": TYPE_NIL } },
+	{&"name": "roll_dice", &"args": [ {&"name": "sides", &"type": TYPE_INT}], &"return": {&"type": TYPE_INT}},
+	{&"name": "RollDice", &"args": [ {&"name": "sides", &"type": TYPE_INT}], &"return": {&"type": TYPE_INT}},
+	{&"name": "debug", &"args": [], &"return": {&"type": TYPE_NIL}, &"flags": METHOD_FLAG_NORMAL | METHOD_FLAG_VARARG},
+	{&"name": "Debug", &"args": [], &"return": {&"type": TYPE_NIL}, &"flags": METHOD_FLAG_NORMAL | METHOD_FLAG_VARARG},
+	{&"name": "wait", &"args": [ {&"name": "time", &"type": TYPE_FLOAT}], &"return": {&"type": TYPE_NIL}},
+	{&"name": "Wait", &"args": [ {&"name": "time", &"type": TYPE_FLOAT}], &"return": {&"type": TYPE_NIL}},
 ]
 #endregion

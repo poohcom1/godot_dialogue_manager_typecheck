@@ -9,7 +9,7 @@ using Godot.Collections;
 
 public partial class TypeChecker : RefCounted
 {
-    public Dictionary GetCsScriptMethodInfo(Script script, string methodName)
+    public Array<Dictionary> GetCsScriptMethodInfo(Script script, string methodName)
     {
         string typeName = script.ResourcePath.GetFile().GetBaseName();
         var type = Assembly
@@ -18,18 +18,19 @@ public partial class TypeChecker : RefCounted
             .FirstOrDefault(t => t.Name == typeName);
 
         if (type == null)
-            return null;
-        var methodInfo = type.GetMethods(
-                BindingFlags.Instance
-                    | BindingFlags.Static
-                    | BindingFlags.Public
-                    | BindingFlags.DeclaredOnly
-            )
-            .FirstOrDefault(m => m.Name == methodName && !m.IsSpecialName);
-        if (methodInfo == null)
-            return null;
+            return new Array<Dictionary>();
 
-        return BuildMethodDictionary(methodInfo);
+        var methods = type.GetMethods(
+            BindingFlags.Instance
+                | BindingFlags.Static
+                | BindingFlags.Public
+                | BindingFlags.DeclaredOnly
+        );
+        var methodInfos = new Array<Dictionary>();
+        foreach (var methodInfo in methods.Where(m => m.Name == methodName && !m.IsSpecialName))
+            methodInfos.Add(BuildMethodDictionary(methodInfo));
+
+        return methodInfos;
     }
 
     // Helper

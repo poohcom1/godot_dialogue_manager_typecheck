@@ -42,6 +42,10 @@ do Autoload.get_parent()
 do Autoload.node2d.global_position
 # C#
 do CSharpAutoload.Function()
+do CSharpAutoload.OverloadedFunction()
+do CSharpAutoload.OverloadedFunction("test")
+do CSharpAutoload.OverloadedFunction(123)
+do CSharpAutoload.OverloadedFunction("test", 123)
 
 Info: Finished valid dialogue.
 

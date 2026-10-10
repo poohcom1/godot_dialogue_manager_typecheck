@@ -20,6 +20,8 @@ func test_invalid():
 	var dialogue: DialogueResource = load("res://tests/resources/invalid.dialogue")
 	var results := await _type_checker.check_type(dialogue.lines, dialogue.using_states)
 	
+	# indexes are line numbers
+
 	assert_int(results[5].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)
 	assert_int(results[6].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)
 	assert_int(results[7].type).is_equal(TypeChecker.TypeErrorType.UnknownMember)
@@ -32,16 +34,20 @@ func test_invalid():
 	assert_int(results[13].type).is_equal(TypeChecker.TypeErrorType.ArgsCount)
 	
 	assert_int(results[14].type).is_equal(TypeChecker.TypeErrorType.ArgMismatch)
-	assert_str(results[14].msg).is_equal('Expected argument 1 to be of type int, got String in "test_args_typed()".')
+	assert_str(results[14].msg).is_equal('Expected argument 1 to be of type "int", got "String" in "test_args_typed()".')
 	
 	assert_int(results[15].type).is_equal(TypeChecker.TypeErrorType.ArgMismatch)
-	assert_str(results[15].msg).is_equal('Expected argument 2 to be of type String, got int in "test_args_typed()".')
+	assert_str(results[15].msg).is_equal('Expected argument 2 to be of type "String", got "int" in "test_args_typed()".')
 	
 	assert_int(results[16].type).is_equal(TypeChecker.TypeErrorType.ArgMismatch)
-	assert_str(results[16].msg).is_equal('Expected argument 3 to be of type Vector2, got int in "test_args_typed()".')
+	assert_str(results[16].msg).is_equal('Expected argument 3 to be of type "Vector2", got "int" in "test_args_typed()".')
 	
 	assert_int(results[17].type).is_equal(TypeChecker.TypeErrorType.UnknownMethod)
-	assert_int(results[19].type).is_equal(TypeChecker.TypeErrorType.SubcriptInvalidIndex)
-	assert_int(results[20].type).is_equal(TypeChecker.TypeErrorType.SubcriptInvalidIndex)
-	
-	
+	assert_int(results[18].type).is_equal(TypeChecker.TypeErrorType.ArgsCount)
+	assert_str(results[18].msg).is_equal('Expected 2 arguments, got 3 in "CSharpAutoload.OverloadedFunction()".')
+	assert_int(results[19].type).is_equal(TypeChecker.TypeErrorType.ArgMismatch)
+	assert_str(results[19].msg).is_equal('Expected argument 1 to be of type "String", got "int" in "CSharpAutoload.OverloadedFunction()".')
+
+
+	assert_int(results[21].type).is_equal(TypeChecker.TypeErrorType.SubcriptInvalidIndex)
+	assert_int(results[22].type).is_equal(TypeChecker.TypeErrorType.SubcriptInvalidIndex)
